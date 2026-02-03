@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Creator Weekly Planner (Local)</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0b0d12" />
+
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    body { margin: 0; background: #0b0d12; color: #e8eaf0; }
+    header { padding: 14px 16px; border-bottom: 1px solid #1b2130; position: sticky; top: 0; background: #0b0d12; }
+    h1 { margin: 0; font-size: 16px; font-weight: 650; }
+    .tabs { display: flex; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #1b2130; }
+    .tab { padding: 8px 10px; border: 1px solid #1b2130; border-radius: 10px; background: #101522; color: #e8eaf0; cursor: pointer; font-size: 13px; }
+    .tab.active { border-color: #3a4a78; background: #16203a; }
+    main { padding: 12px; max-width: 980px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    @media (min-width: 860px){ .grid { grid-template-columns: 1.2fr 0.8fr; } }
+    .card { border: 1px solid #1b2130; background: #101522; border-radius: 14px; padding: 12px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    input, select, textarea, button {
+      border-radius: 10px; border: 1px solid #1b2130; background: #0c1220; color: #e8eaf0;
+      padding: 10px; font-size: 14px;
+    }
+    textarea { width: 100%; min-height: 70px; resize: vertical; }
+    button { cursor: pointer; background: #16203a; border-color: #3a4a78; }
+    button.secondary { background: #0c1220; border-color: #1b2130; }
+    button.danger { background: #3a1620; border-color: #783a4a; }
+    .muted { color: #a9b0c3; font-size: 12px; }
+    .pill { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid #1b2130; background: #0c1220; }
+    .list { display: grid; gap: 8px; }
+    .item { padding: 10px; border: 1px solid #1b2130; border-radius: 12px; background: #0c1220; }
+    .split { display: grid; gap: 10px; grid-template-columns: 1fr; }
+    @media (min-width: 860px){ .split { grid-template-columns: 1fr 1fr; } }
+    .cols { display: grid; gap: 10px; grid-template-columns: 1fr; }
+    @media (min-width: 980px){ .cols { grid-template-columns: repeat(6, 1fr); } }
+    .col h3 { margin: 0 0 8px 0; font-size: 12px; color: #a9b0c3; text-transform: uppercase; letter-spacing: .06em; }
+    .col { border: 1px dashed #1b2130; border-radius: 14px; padding: 10px; min-height: 120px; }
+    .small { font-size: 12px; }
+    a { color: #9db7ff; text-decoration: none; }
+    .hr { height: 1px; background: #1b2130; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Creator Weekly Planner (Local)</h1>
+    <div class="muted" id="subtitle"></div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="week">Diese Woche</button>
+    <button class="tab" data-tab="pipeline">Pipeline</button>
+    <button class="tab" data-tab="content">Content</button>
+  </div>
+
+  <main>
+    <section id="tab-week">
+      <div class="grid">
+        <div class="card">
+          <div class="row" style="justify-content: space-between;">
+            <div>
+              <div class="muted">Fokus</div>
+              <div id="weekFocus" style="font-weight:650;margin-top:4px;">–</div>
+            </div>
+            <button id="btnCreateWeeklyVideo">+ Video für diese Woche</button>
+          </div>
+          <div class="hr"></div>
+          <div class="muted">Next Actions (max. 3)</div>
+          <div id="nextActions" class="list" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="muted">Offene Tasks – Filter</div>
+          <div class="row" style="margin-top:8px;">
+            <select id="filterEnergy">
+              <option value="">Energie: alle</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+            <button class="secondary" id="btnResetFilters">Reset</button>
+          </div>
+          <div class="hr"></div>
+          <div class="muted">Tasks diese Woche</div>
+          <div id="weekTasks" class="list" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-pipeline" style="display:none;">
+      <div class="card">
+        <div class="row" style="justify-content: space-between;">
+          <div>
+            <div class="muted">Pipeline</div>
+            <div class="small">Tipp: Nutze „Status ändern“ an jedem Item.</div>
+          </div>
+          <button id="btnNewContent">+ Content</button>
+        </div>
+      </div>
+      <div style="height:10px;"></div>
+      <div class="cols" id="kanban"></div>
+    </section>
+
+    <section id="tab-content" style="display:none;">
+      <div class="split">
+        <div class="card">
+          <div class="muted">Content erstellen</div>
+          <div class="row" style="margin-top:8px;">
+            <select id="newType">
+              <option value="Video">Video</option>
+              <option value="Stream">Stream</option>
+            </select>
+            <input id="newTitle" placeholder="Working Title" style="flex:1; min-width: 180px;" />
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <input id="newSeries" placeholder="Game / Serie" style="flex:1; min-width: 180px;" />
+            <select id="newStatus">
+              <option>Idea</option><option>Planned</option><option>In Production</option>
+              <option>Ready</option><option>Scheduled</option><option>Published</option>
+            </select>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <input id="newPublish" type="datetime-local" />
+            <select id="newPriority">
+              <option value="1">Prio 1</option>
+              <option value="2" selected>Prio 2</option>
+              <option value="3">Prio 3</option>
+            </select>
+            <button id="btnCreate">Erstellen</button>
+          </div>
+          <div class="hr"></div>
+          <div class="muted">Standard-Tasks für YouTube-Video</div>
+          <div class="small">Beim Video kannst du per Button die Standard-Tasks hinzufügen.</div>
+        </div>
+
+        <div class="card">
+          <div class="muted">Content-Liste</div>
+          <div id="contentList" class="list" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const KEY = "creator_planner_local_v1";
+const Statuses = ["Idea","Planned","In Production","Ready","Scheduled","Published"];
+const KanbanCols = ["Idea","Planned","In Production","Ready","Scheduled","Published"];
+
+function loadState(){
+  const raw = localStorage.getItem(KEY);
+  if(!raw){
+    const init = { content: [], tasks: [] };
+    localStorage.setItem(KEY, JSON.stringify(init));
+    return init;
+  }
+  try { return JSON.parse(raw); } catch { return { content: [], tasks: [] }; }
+}
+function saveState(state){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function uid(prefix="id"){ return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now(); }
+
+function getISOWeek(d = new Date()){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  const y = date.getUTCFullYear();
+  return `${y}-W${String(weekNo).padStart(2,"0")}`;
+}
+function startOfWeek(d = new Date()){
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - day);
+  x.setHours(0,0,0,0);
+  return x;
+}
+function endOfWeek(d = new Date()){
+  const s = startOfWeek(d);
+  const e = new Date(s);
+  e.setDate(e.getDate() + 7);
+  return e;
+}
+function fmtDateTime(ts){
+  if(!ts) return "—";
+  const d = new Date(ts);
+  return d.toLocaleString();
+}
+
+function createContent({type,title,series,status,publish,priority}){
+  const state = loadState();
+  const now = new Date();
+  const item = {
+    id: uid("c"),
+    type,
+    title_working: title || "(ohne Titel)",
+    game_or_series: series || "",
+    status: status || "Idea",
+    week: getISOWeek(now),
+    publish_datetime: publish ? new Date(publish).toISOString() : "",
+    priority: Number(priority || 2),
+    notes: "",
+    project_folder_link: "",
+    youtube_link: ""
+  };
+  state.content.unshift(item);
+  saveState(state);
+  return item;
+}
+
+function addDefaultVideoTasks(contentId){
+  const state = loadState();
+  const c = state.content.find(x => x.id === contentId);
+  if(!c) return;
+
+  const publish = c.publish_datetime ? new Date(c.publish_datetime) : new Date(endOfWeek());
+  const day = 24*60*60*1000;
+  const tasks = [
+    {name:"Outline / Skript", cat:"Script", dur:60, energy:"High", off:-6},
+    {name:"Aufnahme vorbereiten", cat:"Admin", dur:30, energy:"Medium", off:-6},
+    {name:"Aufnahme", cat:"Recording", dur:150, energy:"High", off:-5},
+    {name:"Schnitt (Grob)", cat:"Editing", dur:120, energy:"High", off:-4},
+    {name:"Schnitt (Fein + Audio)", cat:"Editing", dur:120, energy:"High", off:-3},
+    {name:"Thumbnail", cat:"Thumbnail", dur:60, energy:"Medium", off:-2},
+    {name:"Titel/Description", cat:"Upload", dur:45, energy:"Low", off:-2},
+    {name:"Kapitelmarken", cat:"Upload", dur:30, energy:"Low", off:-1},
+    {name:"Final QA", cat:"Upload", dur:20, energy:"Low", off:-1},
+    {name:"Upload / Schedule", cat:"Upload", dur:30, energy:"Low", off:-1},
+  ];
+
+  const existing = state.tasks.filter(t => t.content_id === contentId).map(t => t.task_name);
+  let orderBase = state.tasks.filter(t => t.content_id === contentId).length;
+
+  for(const t of tasks){
+    if(existing.includes(t.name)) continue;
+    const due = new Date(publish.getTime() + t.off*day);
+    due.setHours(18,0,0,0);
+    state.tasks.push({
+      id: uid("t"),
+      content_id: contentId,
+      task_name: t.name,
+      category: t.cat,
+      status: "To Do",
+      due_date: due.toISOString(),
+      duration_min: t.dur,
+      energy: t.energy,
+      order: ++orderBase
+    });
+  }
+  saveState(state);
+}
+
+function updateContent(id, patch){
+  const state = loadState();
+  const idx = state.content.findIndex(x => x.id === id);
+  if(idx < 0) return;
+  state.content[idx] = {...state.content[idx], ...patch};
+  saveState(state);
+}
+function updateTask(id, patch){
+  const state = loadState();
+  const idx = state.tasks.findIndex(x => x.id === id);
+  if(idx < 0) return;
+  state.tasks[idx] = {...state.tasks[idx], ...patch};
+  saveState(state);
+}
+function deleteContent(id){
+  const state = loadState();
+  state.content = state.content.filter(c => c.id !== id);
+  state.tasks = state.tasks.filter(t => t.content_id !== id);
+  saveState(state);
+}
+function deleteTask(id){
+  const state = loadState();
+  state.tasks = state.tasks.filter(t => t.id !== id);
+  saveState(state);
+}
+
+const els = {
+  subtitle: document.getElementById("subtitle"),
+  weekFocus: document.getElementById("weekFocus"),
+  nextActions: document.getElementById("nextActions"),
+  weekTasks: document.getElementById("weekTasks"),
+  filterEnergy: document.getElementById("filterEnergy"),
+  btnResetFilters: document.getElementById("btnResetFilters"),
+  btnCreateWeeklyVideo: document.getElementById("btnCreateWeeklyVideo"),
+  kanban: document.getElementById("kanban"),
+  btnNewContent: document.getElementById("btnNewContent"),
+  newType: document.getElementById("newType"),
+  newTitle: document.getElementById("newTitle"),
+  newSeries: document.getElementById("newSeries"),
+  newStatus: document.getElementById("newStatus"),
+  newPublish: document.getElementById("newPublish"),
+  newPriority: document.getElementById("newPriority"),
+  btnCreate: document.getElementById("btnCreate"),
+  contentList: document.getElementById("contentList"),
+};
+
+function render(){
+  const state = loadState();
+  const now = new Date();
+  const week = getISOWeek(now);
+  const s = startOfWeek(now), e = endOfWeek(now);
+  els.subtitle.textContent = `Woche: ${week} • Lokal gespeichert (offline)`;
+
+  const weekItems = state.content.filter(c => c.week === week);
+  const focus = weekItems
+    .filter(c => c.type === "Video")
+    .sort((a,b)=> (a.priority-b.priority) || ((a.publish_datetime||"").localeCompare(b.publish_datetime||"")) )[0];
+
+  els.weekFocus.innerHTML = focus
+    ? `<div style="font-size:14px;">${escapeHtml(focus.title_working)} <span class="pill">${focus.status}</span></div>
+       <div class="muted">Publish: ${focus.publish_datetime ? fmtDateTime(focus.publish_datetime) : "—"} • ${escapeHtml(focus.game_or_series || "")}</div>
+       <div class="row" style="margin-top:8px;">
+         <button class="secondary" onclick="window.__addDefaults('${focus.id}')">+ Standard-Tasks</button>
+         <button class="secondary" onclick="window.__editNotes('${focus.id}')">Notizen</button>
+       </div>`
+    : `<div class="muted">Kein Video für diese Woche. Erstelle eins mit „+ Video für diese Woche“.</div>`;
+
+  const energyFilter = els.filterEnergy.value;
+  const weekTasks = state.tasks
+    .filter(t => t.due_date)
+    .filter(t => {
+      const d = new Date(t.due_date);
+      return d >= s && d < e;
+    })
+    .filter(t => !energyFilter || t.energy === energyFilter)
+    .sort((a,b)=> new Date(a.due_date) - new Date(b.due_date));
+
+  const next = weekTasks
+    .filter(t => t.status !== "Done")
+    .sort((a,b)=>{
+      const da = new Date(a.due_date), db = new Date(b.due_date);
+      if(da.getTime() !== db.getTime()) return da - db;
+      const pr = (x)=> x.energy==="High"?0:x.energy==="Medium"?1:2;
+      return pr(a)-pr(b);
+    })
+    .slice(0,3);
+
+  els.nextActions.innerHTML = next.length ? "" : `<div class="muted">Keine offenen Tasks diese Woche.</div>`;
+  for(const t of next) els.nextActions.appendChild(taskCard(t, true));
+
+  els.weekTasks.innerHTML = weekTasks.length ? "" : `<div class="muted">Keine Tasks in dieser Woche (noch).</div>`;
+  for(const t of weekTasks) els.weekTasks.appendChild(taskCard(t, false));
+
+  els.kanban.innerHTML = "";
+  for(const col of KanbanCols){
+    const box = document.createElement("div");
+    box.className = "col";
+    box.innerHTML = `<h3>${col}</h3>`;
+    const list = document.createElement("div");
+    list.className = "list";
+
+    const items = state.content
+      .filter(c => c.status === col)
+      .sort((a,b)=> (a.priority-b.priority));
+
+    if(!items.length){
+      const empty = document.createElement("div");
+      empty.className = "muted small";
+      empty.textContent = "—";
+      list.appendChild(empty);
+    } else {
+      for(const c of items) list.appendChild(contentMiniCard(c));
+    }
+    box.appendChild(list);
+    els.kanban.appendChild(box);
+  }
+
+  els.contentList.innerHTML = "";
+  if(!state.content.length){
+    els.contentList.innerHTML = `<div class="muted">Noch kein Content vorhanden.</div>`;
+  } else {
+    for(const c of state.content) els.contentList.appendChild(contentFullCard(c));
+  }
+}
+
+function taskCard(t, compact){
+  const state = loadState();
+  const c = state.content.find(x => x.id === t.content_id);
+  const el = document.createElement("div");
+  el.className = "item";
+  el.innerHTML = `
+    <div class="row" style="justify-content: space-between;">
+      <div>
+        <div style="font-weight:650">${escapeHtml(t.task_name)}</div>
+        <div class="muted">${escapeHtml(t.category)} • ${t.energy} • ${t.duration_min} min • Due: ${fmtDateTime(t.due_date)}</div>
+        ${compact && c ? `<div class="muted">Content: ${escapeHtml(c.title_working)}</div>` : ""}
+      </div>
+      <div class="row">
+        <select onchange="window.__setTaskStatus('${t.id}', this.value)">
+          ${["To Do","Doing","Done"].map(s => `<option ${t.status===s?"selected":""}>${s}</option>`).join("")}
+        </select>
+        <button class="danger" onclick="window.__delTask('${t.id}')">✕</button>
+      </div>
+    </div>
+  `;
+  return el;
+}
+
+function contentMiniCard(c){
+  const el = document.createElement("div");
+  el.className = "item";
+  el.innerHTML = `
+    <div style="font-weight:650">${escapeHtml(c.title_working)}</div>
+    <div class="muted">${c.type} • Prio ${c.priority} • ${escapeHtml(c.game_or_series || "")}</div>
+    <div class="row" style="margin-top:8px;">
+      <select onchange="window.__setContentStatus('${c.id}', this.value)">
+        ${Statuses.map(s => `<option ${c.status===s?"selected":""}>${s}</option>`).join("")}
+      </select>
+      <button class="secondary" onclick="window.__addDefaults('${c.id}')">Tasks</button>
+      <button class="danger" onclick="window.__delContent('${c.id}')">✕</button>
+    </div>
+  `;
+  return el;
+}
+
+function contentFullCard(c){
+  const state = loadState();
+  const tasks = state.tasks.filter(t => t.content_id === c.id).sort((a,b)=> (a.order-b.order));
+  const done = tasks.filter(t => t.status==="Done").length;
+  const total = tasks.length;
+
+  const el = document.createElement("div");
+  el.className = "item";
+  el.innerHTML = `
+    <div class="row" style="justify-content: space-between;">
+      <div>
+        <div style="font-weight:650">${escapeHtml(c.title_working)} <span class="pill">${c.type}</span> <span class="pill">${c.status}</span></div>
+        <div class="muted">${escapeHtml(c.game_or_series||"")} • Woche ${c.week} • Publish: ${c.publish_datetime?fmtDateTime(c.publish_datetime):"—"}</div>
+        <div class="muted">Tasks: ${done}/${total}</div>
+      </div>
+      <div class="row">
+        <select onchange="window.__setContentStatus('${c.id}', this.value)">
+          ${Statuses.map(s => `<option ${c.status===s?"selected":""}>${s}</option>`).join("")}
+        </select>
+        <button class="secondary" onclick="window.__addDefaults('${c.id}')">+ Standard-Tasks</button>
+        <button class="secondary" onclick="window.__editLinks('${c.id}')">Links</button>
+        <button class="danger" onclick="window.__delContent('${c.id}')">✕</button>
+      </div>
+    </div>
+  `;
+  return el;
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[s]));
+}
+
+window.__setContentStatus = (id, status) => { updateContent(id, {status}); render(); };
+window.__setTaskStatus = (id, status) => { updateTask(id, {status}); render(); };
+window.__delContent = (id) => { if(confirm("Content wirklich löschen?")) { deleteContent(id); render(); } };
+window.__delTask = (id) => { if(confirm("Task löschen?")) { deleteTask(id); render(); } };
+window.__addDefaults = (id) => { addDefaultVideoTasks(id); render(); };
+
+window.__editNotes = (id) => {
+  const state = loadState();
+  const c = state.content.find(x => x.id === id);
+  if(!c) return;
+  const n = prompt("Notizen (überschreibt):", c.notes || "");
+  if(n !== null){ updateContent(id, {notes: n}); render(); }
+};
+
+window.__editLinks = (id) => {
+  const state = loadState();
+  const c = state.content.find(x => x.id === id);
+  if(!c) return;
+  const pf = prompt("Projektordner-Link:", c.project_folder_link || "");
+  if(pf === null) return;
+  const yl = prompt("YouTube-Link (nach Upload):", c.youtube_link || "");
+  if(yl === null) return;
+  updateContent(id, {project_folder_link: pf, youtube_link: yl});
+  render();
+};
+
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.getElementById("tab-week").style.display = tab==="week" ? "" : "none";
+    document.getElementById("tab-pipeline").style.display = tab==="pipeline" ? "" : "none";
+    document.getElementById("tab-content").style.display = tab==="content" ? "" : "none";
+    render();
+  });
+});
+
+els.btnCreate.addEventListener("click", ()=>{
+  const item = createContent({
+    type: els.newType.value,
+    title: els.newTitle.value.trim(),
+    series: els.newSeries.value.trim(),
+    status: els.newStatus.value,
+    publish: els.newPublish.value,
+    priority: els.newPriority.value
+  });
+  els.newTitle.value = "";
+  if(item.type==="Video"){
+    const ok = confirm("Standard-Tasks für dieses Video hinzufügen?");
+    if(ok) addDefaultVideoTasks(item.id);
+  }
+  render();
+});
+
+els.btnCreateWeeklyVideo.addEventListener("click", ()=>{
+  const now = new Date();
+  const publish = new Date(endOfWeek(now));
+  publish.setHours(18,0,0,0);
+  const item = createContent({
+    type:"Video",
+    title:"Video der Woche",
+    series:"",
+    status:"Planned",
+    publish: publish.toISOString().slice(0,16),
+    priority: 1
+  });
+  addDefaultVideoTasks(item.id);
+  render();
+});
+
+els.btnNewContent.addEventListener("click", ()=>{
+  document.querySelector('[data-tab="content"]').click();
+  els.newTitle.focus();
+});
+
+els.btnResetFilters.addEventListener("click", ()=>{
+  els.filterEnergy.value = "";
+  render();
+});
+els.filterEnergy.addEventListener("change", render);
+
+render();
+
+// --- PWA: service worker registration ---
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+
+</script>
+</body>
+</html>
