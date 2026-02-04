@@ -3,23 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Creator Weekly Planner (Local)</title>
+  <title>Creator Planner (Local PWA)</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0b0d12" />
-
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
     body { margin: 0; background: #0b0d12; color: #e8eaf0; }
-    header { padding: 14px 16px; border-bottom: 1px solid #1b2130; position: sticky; top: 0; background: #0b0d12; }
+    header { padding: 14px 16px; border-bottom: 1px solid #1b2130; position: sticky; top: 0; background: #0b0d12; z-index: 5; }
     h1 { margin: 0; font-size: 16px; font-weight: 650; }
-    .tabs { display: flex; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #1b2130; }
+    .muted { color: #a9b0c3; font-size: 12px; }
+    .tabs { display:flex; gap:8px; padding: 10px 12px; border-bottom: 1px solid #1b2130; position: sticky; top: 49px; background:#0b0d12; z-index: 4;}
     .tab { padding: 8px 10px; border: 1px solid #1b2130; border-radius: 10px; background: #101522; color: #e8eaf0; cursor: pointer; font-size: 13px; }
     .tab.active { border-color: #3a4a78; background: #16203a; }
-    main { padding: 12px; max-width: 980px; margin: 0 auto; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-    @media (min-width: 860px){ .grid { grid-template-columns: 1.2fr 0.8fr; } }
+    main { padding: 12px; max-width: 1020px; margin: 0 auto; }
     .card { border: 1px solid #1b2130; background: #101522; border-radius: 14px; padding: 12px; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .row { display:flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     input, select, textarea, button {
       border-radius: 10px; border: 1px solid #1b2130; background: #0c1220; color: #e8eaf0;
       padding: 10px; font-size: 14px;
@@ -28,25 +26,20 @@
     button { cursor: pointer; background: #16203a; border-color: #3a4a78; }
     button.secondary { background: #0c1220; border-color: #1b2130; }
     button.danger { background: #3a1620; border-color: #783a4a; }
-    .muted { color: #a9b0c3; font-size: 12px; }
     .pill { font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid #1b2130; background: #0c1220; }
-    .list { display: grid; gap: 8px; }
+    .list { display:grid; gap: 8px; }
     .item { padding: 10px; border: 1px solid #1b2130; border-radius: 12px; background: #0c1220; }
-    .split { display: grid; gap: 10px; grid-template-columns: 1fr; }
-    @media (min-width: 860px){ .split { grid-template-columns: 1fr 1fr; } }
-    .cols { display: grid; gap: 10px; grid-template-columns: 1fr; }
-    @media (min-width: 980px){ .cols { grid-template-columns: repeat(6, 1fr); } }
-    .col h3 { margin: 0 0 8px 0; font-size: 12px; color: #a9b0c3; text-transform: uppercase; letter-spacing: .06em; }
-    .col { border: 1px dashed #1b2130; border-radius: 14px; padding: 10px; min-height: 120px; }
-    .small { font-size: 12px; }
-    a { color: #9db7ff; text-decoration: none; }
     .hr { height: 1px; background: #1b2130; margin: 10px 0; }
+    .split { display:grid; gap: 10px; grid-template-columns: 1fr; }
+    @media (min-width: 860px){ .split { grid-template-columns: 1fr 1fr; } }
+    .err { border-color:#783a4a; background:#2a1016; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Creator Weekly Planner (Local)</h1>
+    <h1>Creator Planner (Local)</h1>
     <div class="muted" id="subtitle"></div>
+    <div id="errorBox" class="card err" style="display:none; margin-top:10px;"></div>
   </header>
 
   <div class="tabs">
@@ -56,6 +49,27 @@
   </div>
 
   <main>
+    <section id="tab-calendar">
+      <div class="card">
+        <div class="row" style="justify-content: space-between;">
+          <div>
+            <div class="muted">Kalender</div>
+            <div class="muted">Wochen-Ansicht mit Tasks & Veröffentlichungen.</div>
+          </div>
+          <div class="row">
+            <select id="calWeeks">
+              <option value="2" selected>Nächste 2 Wochen</option>
+              <option value="4">Nächste 4 Wochen</option>
+              <option value="1">Nächste 1 Woche</option>
+            </select>
+            <button class="secondary" id="btnAutoPlanAll">Auto-Plan: alle offenen Videos</button>
+          </div>
+        </div>
+      </div>
+      <div style="height:10px;"></div>
+      <div id="calendarList" class="list"></div>
+    </section>
+
     <section id="tab-content" style="display:none;">
       <div class="split">
         <div class="card">
@@ -69,23 +83,18 @@
           </div>
           <div class="row" style="margin-top:8px;">
             <input id="newSeries" placeholder="Game / Serie" style="flex:1; min-width: 180px;" />
-            <select id="newStatus">
-              <option>Idea</option><option>Planned</option><option>In Production</option>
-              <option>Ready</option><option>Scheduled</option><option>Published</option>
-            </select>
+            <input id="newPublish" type="datetime-local" />
           </div>
           <div class="row" style="margin-top:8px;">
-            <input id="newPublish" type="datetime-local" />
             <select id="newPriority">
               <option value="1">Prio 1</option>
               <option value="2" selected>Prio 2</option>
               <option value="3">Prio 3</option>
             </select>
             <button id="btnCreate">Erstellen</button>
+            <button class="secondary" id="btnCreateWeeklyPlan">Plan für diese Woche</button>
           </div>
-          <div class="hr"></div>
-          <div class="muted">Standard-Tasks für YouTube-Video</div>
-          <div class="small">Beim Video kannst du per Button die Standard-Tasks hinzufügen.</div>
+          <div class="small muted" style="margin-top:8px;">Tipp: Wenn Publish leer ist, wird deine Standard-Zeit genutzt. Plan erstellt 1 Video + optional Stream.</div>
         </div>
 
         <div class="card">
@@ -94,147 +103,94 @@
         </div>
       </div>
     </section>
-  
-    <!-- SETTINGS -->
+
     <section id="tab-settings" style="display:none;">
       <div class="split">
         <div class="card">
           <div class="muted">Standard-Zeiten</div>
-          <div class="small" style="margin-top:6px;">Diese Einstellungen steuern die Default-Planung für neue Wochen-Videos/Streams.</div>
-          <div class="hr"></div>
-
-          <div class="muted">Video-Upload</div>
           <div class="row" style="margin-top:8px;">
+            <span class="pill">Video</span>
             <select id="setPublishDay">
-              <option value="0">Montag</option>
-              <option value="1">Dienstag</option>
-              <option value="2">Mittwoch</option>
-              <option value="3">Donnerstag</option>
-              <option value="4">Freitag</option>
-              <option value="5">Samstag</option>
-              <option value="6">Sonntag</option>
+              <option value="0">Montag</option><option value="1">Dienstag</option><option value="2">Mittwoch</option>
+              <option value="3">Donnerstag</option><option value="4">Freitag</option><option value="5">Samstag</option><option value="6">Sonntag</option>
             </select>
             <input id="setPublishTime" type="time" />
           </div>
 
-          <div class="hr"></div>
-          <div class="muted">Stream (optional)</div>
-          <div class="row" style="margin-top:8px;">
+          <div class="row" style="margin-top:10px;">
+            <span class="pill">Stream</span>
             <select id="setStreamDay">
-              <option value="0">Montag</option>
-              <option value="1">Dienstag</option>
-              <option value="2">Mittwoch</option>
-              <option value="3">Donnerstag</option>
-              <option value="4">Freitag</option>
-              <option value="5">Samstag</option>
-              <option value="6">Sonntag</option>
+              <option value="0">Montag</option><option value="1">Dienstag</option><option value="2">Mittwoch</option>
+              <option value="3">Donnerstag</option><option value="4">Freitag</option><option value="5">Samstag</option><option value="6">Sonntag</option>
             </select>
             <input id="setStreamTime" type="time" />
+          </div>
+
+          <div class="hr"></div>
+          <div class="muted">Auto-Plan</div>
+          <div class="row" style="margin-top:10px;">
+            <span class="pill">Arbeitsstart</span>
+            <input id="setWorkStartTime" type="time" />
+          </div>
+
+          <div class="hr"></div>
+          <div class="muted">Schritte (Video)</div>
+          <div class="row" style="margin-top:10px;">
+            <label class="muted"><input type="checkbox" id="ap_outline" /> Skript/Outline</label>
+            <label class="muted"><input type="checkbox" id="ap_recprep" /> Aufnahme vorbereiten</label>
+            <label class="muted"><input type="checkbox" id="ap_record" /> Aufnahme</label>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <label class="muted"><input type="checkbox" id="ap_edit_rough" /> Schnitt grob</label>
+            <label class="muted"><input type="checkbox" id="ap_edit_fine" /> Schnitt fein+Audio</label>
+            <label class="muted"><input type="checkbox" id="ap_thumb" /> Thumbnail</label>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <label class="muted"><input type="checkbox" id="ap_title" /> Titel/Description</label>
+            <label class="muted"><input type="checkbox" id="ap_chapters" /> Kapitelmarken</label>
+            <label class="muted"><input type="checkbox" id="ap_qa" /> QA</label>
+            <label class="muted"><input type="checkbox" id="ap_upload" /> Upload/Schedule</label>
           </div>
 
           <div class="row" style="margin-top:12px;">
             <button id="btnSaveSettings">Speichern</button>
             <button class="secondary" id="btnResetSettings">Reset</button>
           </div>
-
-          
-          <div class="hr"></div>
-          <div class="muted">Auto-Plan Optionen</div>
-          <div class="small" style="margin-top:6px;">Aktiviere nur die Schritte, die du wirklich nutzt. Auto-Plan plant Tasks ab deiner Arbeitszeit und nie in der Vergangenheit.</div>
-
-          <div class="row" style="margin-top:10px;">
-            <div class="pill">Arbeitszeit Start</div>
-            <input id="setWorkStartTime" type="time" />
-          </div>
-
-          <div class="hr"></div>
-          <div class="muted">Auto-Plan Schritte</div>
-          <div class="small muted" style="margin-top:6px;">Video-Workflow</div>
-
-          <div class="row" style="margin-top:10px;">
-            <label class="small"><input type="checkbox" id="ap_outline" /> Outline/Skript</label>
-            <label class="small"><input type="checkbox" id="ap_recprep" /> Aufnahme vorbereiten</label>
-            <label class="small"><input type="checkbox" id="ap_record" /> Aufnahme</label>
-          </div>
-          <div class="row" style="margin-top:10px;">
-            <label class="small"><input type="checkbox" id="ap_edit_rough" /> Schnitt (Grob)</label>
-            <label class="small"><input type="checkbox" id="ap_edit_fine" /> Schnitt (Fein + Audio)</label>
-            <label class="small"><input type="checkbox" id="ap_thumb" /> Thumbnail</label>
-          </div>
-          <div class="row" style="margin-top:10px;">
-            <label class="small"><input type="checkbox" id="ap_title" /> Titel/Description</label>
-            <label class="small"><input type="checkbox" id="ap_chapters" /> Kapitelmarken</label>
-            <label class="small"><input type="checkbox" id="ap_qa" /> Final QA</label>
-            <label class="small"><input type="checkbox" id="ap_upload" /> Upload/Schedule</label>
-          </div>
-
-          <div class="hr"></div>
-          <div class="muted">Tools</div>
-          <div class="row" style="margin-top:8px;">
-            <button class="secondary" id="btnExportData">Backup exportieren</button>
-            <button class="secondary" id="btnImportData">Backup importieren</button>
-          </div>
-          <div class="small muted" style="margin-top:8px;">Backup-Datei ist JSON. Du kannst sie z.B. in Google Drive speichern.</div>
         </div>
 
         <div class="card">
-          <div class="muted">Upload/Streaming-Plan</div>
-          <div class="small" style="margin-top:6px;">Erstellt Content für die aktuelle Woche nach deinen Standard-Zeiten.</div>
-          <div class="hr"></div>
-
-          <div class="row">
-            <button id="btnCreateWeeklyPlan">Plan für diese Woche erstellen</button>
+          <div class="muted">Backup</div>
+          <div class="row" style="margin-top:8px;">
+            <button class="secondary" id="btnExportData">Export</button>
+            <button class="secondary" id="btnImportData">Import</button>
           </div>
-          <div class="small muted" style="margin-top:8px;">
-            Der Plan erstellt: 1 Video (immer) + optional 1 Stream, falls du ihn bestätigst.
-          </div>
-
-          <div class="hr"></div>
-          <div class="muted">Aktuelle Einstellungen</div>
-          <div id="settingsSummary" class="small" style="margin-top:8px;"></div>
+          <div class="small muted" style="margin-top:8px;">Export = JSON-Datei (Google Drive o.ä.). Import stellt Daten + Settings wieder her.</div>
         </div>
       </div>
     </section>
-
-  
-    <!-- CALENDAR -->
-    <section id="tab-calendar">
-      <div class="card">
-        <div class="row" style="justify-content: space-between;">
-          <div>
-            <div class="muted">Kalender (Auto-Plan)</div>
-            <div class="small">Zeigt Tasks und Veröffentlichungen. Auto-Plan plant keine Termine in der Vergangenheit.</div>
-          </div>
-          <div class="row">
-            <select id="calRange">
-              <option value="2" selected>Nächste 2 Wochen</option>
-              <option value="4">Nächste 4 Wochen</option>
-              <option value="1">Nächste 1 Woche</option>
-            </select>
-            <button class="secondary" id="btnAutoPlanAll">Auto-Plan: alle offenen Videos</button>
-          </div>
-        </div>
-      </div>
-      <div style="height:10px;"></div>
-      <div id="calendarList" class="list"></div>
-    </section>
-
   </main>
 
 <script>
-const KEY = "creator_planner_local_v1";
-const Statuses = ["Idea","Planned","In Production","Ready","Scheduled","Published"];
-const KanbanCols = ["Idea","Planned","In Production","Ready","Scheduled","Published"];
+/* ---------- Storage ---------- */
+const KEY = "creator_planner_local_v1";                 // keep to preserve your data
+const SETTINGS_KEY = "creator_planner_settings_v1";     // keep
 
-
-const SETTINGS_KEY = "creator_planner_settings_v1";
+function loadState(){
+  const raw = localStorage.getItem(KEY);
+  if(!raw){
+    const init = { content: [], tasks: [] };
+    localStorage.setItem(KEY, JSON.stringify(init));
+    return init;
+  }
+  try { return JSON.parse(raw); } catch { return { content: [], tasks: [] }; }
+}
+function saveState(state){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function uid(prefix="id"){ return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now(); }
 
 function defaultSettings(){
   return {
-    publishDay: 6,         // 0=Mon ... 6=Sun
-    publishTime: "18:00",
-    streamDay: 5,
-    streamTime: "20:00",
+    publishDay: 6, publishTime: "18:00",
+    streamDay: 5, streamTime: "20:00",
     workStartTime: "17:00",
     autoplan: {
       outline: false,
@@ -257,10 +213,8 @@ function loadSettings(){
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
     return s;
   }
-  try {
-    const s = JSON.parse(raw);
-    return { ...defaultSettings(), ...s };
-  } catch {
+  try { return { ...defaultSettings(), ...JSON.parse(raw) }; }
+  catch {
     const s = defaultSettings();
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
     return s;
@@ -268,100 +222,14 @@ function loadSettings(){
 }
 function saveSettings(s){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
 
-function dateInCurrentWeek(dayIndexMon0, timeHHMM){
-  const now = new Date();
-  const s = startOfWeek(now);
-  const d = new Date(s);
-  d.setDate(s.getDate() + Number(dayIndexMon0));
-  const parts = String(timeHHMM || "18:00").split(":");
-  const hh = parseInt(parts[0] || "0", 10);
-  const mm = parseInt(parts[1] || "0", 10);
-  d.setHours(hh, mm, 0, 0);
-  return d;
+/* ---------- Dates ---------- */
+function startOfWeek(d = new Date()){
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7; // Mon=0
+  x.setDate(x.getDate() - day);
+  x.setHours(0,0,0,0);
+  return x;
 }
-function toDatetimeLocalValue(dateObj){
-  const d = new Date(dateObj);
-  const pad = (n)=> String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-
-function nextOccurrenceInOrNextWeek(dayIndexMon0, timeHHMM){
-  // Returns a date in current week at day/time, but if that is in the past, returns next week.
-  const target = dateInCurrentWeek(dayIndexMon0, timeHHMM);
-  const now = new Date();
-  if(target.getTime() <= now.getTime()){
-    target.setDate(target.getDate() + 7);
-  }
-  return target;
-}
-
-function clampNotPast(dateObj, preferTimeHHMM){
-  // Ensures date is not in the past. If past, move to today at preferTime, or now+30min.
-  const now = new Date();
-  if(dateObj.getTime() >= now.getTime()) return dateObj;
-
-  const d = new Date(now);
-  const parts = String(preferTimeHHMM || "18:00").split(":");
-  const hh = parseInt(parts[0] || "18", 10);
-  const mm = parseInt(parts[1] || "0", 10);
-  d.setHours(hh, mm, 0, 0);
-  if(d.getTime() <= now.getTime()){
-    d.setTime(now.getTime() + 30*60*1000);
-  }
-  return d;
-}
-
-function dayKey(dateObj){
-  const d = new Date(dateObj);
-  d.setHours(0,0,0,0);
-  return d.toISOString();
-}
-
-
-function renderSettingsUI(){
-  const s = loadSettings();
-  if(els.setPublishDay) els.setPublishDay.value = String(s.publishDay);
-  if(els.setPublishTime) els.setPublishTime.value = s.publishTime;
-  if(els.setStreamDay) els.setStreamDay.value = String(s.streamDay);
-  if(els.setStreamTime) els.setStreamTime.value = s.streamTime;
-
-  if(els.setWorkStartTime) els.setWorkStartTime.value = s.workStartTime || "17:00";
-  const ap = s.autoplan || {};
-  if(els.ap_outline) els.ap_outline.checked = !!ap.outline;
-  if(els.ap_recprep) els.ap_recprep.checked = ap.recprep !== false;
-  if(els.ap_record) els.ap_record.checked = ap.record !== false;
-  if(els.ap_edit_rough) els.ap_edit_rough.checked = ap.edit_rough !== false;
-  if(els.ap_edit_fine) els.ap_edit_fine.checked = ap.edit_fine !== false;
-  if(els.ap_thumb) els.ap_thumb.checked = ap.thumb !== false;
-  if(els.ap_title) els.ap_title.checked = ap.title !== false;
-  if(els.ap_chapters) els.ap_chapters.checked = ap.chapters !== false;
-  if(els.ap_qa) els.ap_qa.checked = !!ap.qa;
-  if(els.ap_upload) els.ap_upload.checked = ap.upload !== false;
-
-
-  const pub = nextOccurrenceInOrNextWeek(s.publishDay, s.publishTime);
-  const st = nextOccurrenceInOrNextWeek(s.streamDay, s.streamTime);
-  if(els.settingsSummary){
-    els.settingsSummary.innerHTML =
-      `<div><span class="pill">Video</span> ${pub.toLocaleString()}</div>` +
-      `<div style="margin-top:6px;"><span class="pill">Stream</span> ${st.toLocaleString()}</div>`;
-  }
-}
-
-
-function loadState(){
-  const raw = localStorage.getItem(KEY);
-  if(!raw){
-    const init = { content: [], tasks: [] };
-    localStorage.setItem(KEY, JSON.stringify(init));
-    return init;
-  }
-  try { return JSON.parse(raw); } catch { return { content: [], tasks: [] }; }
-}
-function saveState(state){ localStorage.setItem(KEY, JSON.stringify(state)); }
-function uid(prefix="id"){ return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now(); }
-
 function getISOWeek(d = new Date()){
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const dayNum = date.getUTCDay() || 7;
@@ -371,203 +239,148 @@ function getISOWeek(d = new Date()){
   const y = date.getUTCFullYear();
   return `${y}-W${String(weekNo).padStart(2,"0")}`;
 }
-function startOfWeek(d = new Date()){
-  const x = new Date(d);
-  const day = (x.getDay() + 6) % 7;
-  x.setDate(x.getDate() - day);
-  x.setHours(0,0,0,0);
-  return x;
+function toDatetimeLocalValue(dateObj){
+  const d = new Date(dateObj);
+  const pad = (n)=> String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-function endOfWeek(d = new Date()){
-  const s = startOfWeek(d);
-  const e = new Date(s);
-  e.setDate(e.getDate() + 7);
-  return e;
+function dateInWeek(baseWeekStart, dayIndexMon0, timeHHMM){
+  const d = new Date(baseWeekStart);
+  d.setDate(baseWeekStart.getDate() + Number(dayIndexMon0));
+  const parts = String(timeHHMM || "18:00").split(":");
+  const hh = parseInt(parts[0] || "18", 10);
+  const mm = parseInt(parts[1] || "0", 10);
+  d.setHours(hh, mm, 0, 0);
+  return d;
 }
-function fmtDateTime(ts){
-  if(!ts) return "—";
-  const d = new Date(ts);
-  return d.toLocaleString();
+function nextOccurrence(dayIndexMon0, timeHHMM){
+  const now = new Date();
+  const ws = startOfWeek(now);
+  let target = dateInWeek(ws, dayIndexMon0, timeHHMM);
+  if(target.getTime() <= now.getTime()){
+    const nws = new Date(ws); nws.setDate(ws.getDate()+7);
+    target = dateInWeek(nws, dayIndexMon0, timeHHMM);
+  }
+  return target;
+}
+function clampNotPast(dateObj, preferTimeHHMM){
+  const now = new Date();
+  if(dateObj.getTime() >= now.getTime()) return dateObj;
+  const d = new Date(now);
+  const parts = String(preferTimeHHMM || "17:00").split(":");
+  const hh = parseInt(parts[0] || "17", 10);
+  const mm = parseInt(parts[1] || "0", 10);
+  d.setHours(hh, mm, 0, 0);
+  if(d.getTime() <= now.getTime()) d.setTime(now.getTime() + 30*60*1000);
+  return d;
+}
+function dayKey(dateObj){
+  const d = new Date(dateObj);
+  d.setHours(0,0,0,0);
+  return d.toISOString();
+}
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[s]));
 }
 
-function createContent({type,title,series,status,publish,priority}){
+/* ---------- CRUD ---------- */
+function createContent({type,title,series,publish,priority}){
   const state = loadState();
   const now = new Date();
   const item = {
     id: uid("c"),
-    type,
+    type: type || "Video",
     title_working: title || "(ohne Titel)",
     game_or_series: series || "",
-    status: status || "Idea",
+    status: "Planned",
     week: getISOWeek(now),
     publish_datetime: publish ? new Date(publish).toISOString() : "",
     priority: Number(priority || 2),
-    notes: "",
-    project_folder_link: "",
-    youtube_link: ""
+    notes: ""
   };
   state.content.unshift(item);
   saveState(state);
   return item;
 }
-
-function addDefaultVideoTasks(contentId){
+function updateContent(id, patch){
   const state = loadState();
-  const c = state.content.find(x => x.id === contentId);
-  if(!c) return;
-
-  const publish = c.publish_datetime ? new Date(c.publish_datetime) : new Date(endOfWeek());
-  const day = 24*60*60*1000;
-  const tasks = [
-    {name:"Outline / Skript", cat:"Script", dur:60, energy:"High", off:-6},
-    {name:"Aufnahme vorbereiten", cat:"Admin", dur:30, energy:"Medium", off:-6},
-    {name:"Aufnahme", cat:"Recording", dur:150, energy:"High", off:-5},
-    {name:"Schnitt (Grob)", cat:"Editing", dur:120, energy:"High", off:-4},
-    {name:"Schnitt (Fein + Audio)", cat:"Editing", dur:120, energy:"High", off:-3},
-    {name:"Thumbnail", cat:"Thumbnail", dur:60, energy:"Medium", off:-2},
-    {name:"Titel/Description", cat:"Upload", dur:45, energy:"Low", off:-2},
-    {name:"Kapitelmarken", cat:"Upload", dur:30, energy:"Low", off:-1},
-    {name:"Final QA", cat:"Upload", dur:20, energy:"Low", off:-1},
-    {name:"Upload / Schedule", cat:"Upload", dur:30, energy:"Low", off:-1},
-  ];
-
-  const existing = state.tasks.filter(t => t.content_id === contentId).map(t => t.task_name);
-  let orderBase = state.tasks.filter(t => t.content_id === contentId).length;
-
-  for(const t of tasks){
-    if(existing.includes(t.name)) continue;
-    let due = new Date(publish.getTime() + t.off*day);
-    due.setHours(18,0,0,0);
-    due = clampNotPast(due, "18:00");
-    state.tasks.push({
-      id: uid("t"),
-      content_id: contentId,
-      task_name: t.name,
-      category: t.cat,
-      status: "To Do",
-      due_date: due.toISOString(),
-      duration_min: t.dur,
-      energy: t.energy,
-      order: ++orderBase
-    });
-  }
+  const i = state.content.findIndex(x=>x.id===id);
+  if(i<0) return;
+  state.content[i] = {...state.content[i], ...patch};
+  saveState(state);
+}
+function deleteContent(id){
+  const state = loadState();
+  state.content = state.content.filter(c=>c.id!==id);
+  state.tasks = state.tasks.filter(t=>t.content_id!==id);
+  saveState(state);
+}
+function updateTask(id, patch){
+  const state = loadState();
+  const i = state.tasks.findIndex(x=>x.id===id);
+  if(i<0) return;
+  state.tasks[i] = {...state.tasks[i], ...patch};
   saveState(state);
 }
 
-
-function addDefaultStreamTasks(contentId){
-  const state = loadState();
-  const c = state.content.find(x => x.id === contentId);
-  if(!c) return;
-
-  const start = c.publish_datetime ? new Date(c.publish_datetime) : new Date();
-  const day = 24*60*60*1000;
-
-  const tasks = [
-    {name:"Stream-Plan (Thema/Goal)", cat:"Script", dur:30, energy:"Medium", off:-1},
-    {name:"Stream-Setup Check (Audio/OBS)", cat:"Admin", dur:20, energy:"Low", off:-1},
-    {name:"Stream starten", cat:"Recording", dur:180, energy:"High", off:0},
-    {name:"VOD/Upload prüfen", cat:"Upload", dur:20, energy:"Low", off:0},
-    {name:"Notizen: Highlights", cat:"Admin", dur:15, energy:"Low", off:0},
-  ];
-
-  const existing = state.tasks.filter(t => t.content_id === contentId).map(t => t.task_name);
-  let orderBase = state.tasks.filter(t => t.content_id === contentId).length;
-
-  for(const t of tasks){
-    if(existing.includes(t.name)) continue;
-    let due = new Date(start.getTime() + t.off*day);
-    if(t.off === 0){
-      due.setHours(start.getHours(), start.getMinutes(), 0, 0);
-    } else {
-      due.setHours(18,0,0,0);
-    }
-    due = clampNotPast(due, t.off === 0 ? `${String(start.getHours()).padStart(2,'0')}:${String(start.getMinutes()).padStart(2,'0')}` : "18:00");
-    state.tasks.push({
-      id: uid("t"),
-      content_id: contentId,
-      task_name: t.name,
-      category: t.cat,
-      status: "To Do",
-      due_date: due.toISOString(),
-      duration_min: t.dur,
-      energy: t.energy,
-      order: ++orderBase
-    });
-  }
-  saveState(state);
-}
-
-
-
+/* ---------- Auto-Plan (Video) ---------- */
 function autoPlanVideoTasks(contentId){
   const state = loadState();
-  const c = state.content.find(x => x.id === contentId);
-  if(!c) return;
-  if(c.type !== "Video") return;
+  const c = state.content.find(x=>x.id===contentId);
+  if(!c || c.type !== "Video") return;
 
+  const s = loadSettings();
+  const ap = s.autoplan || defaultSettings().autoplan;
+
+  // ensure publish exists and is in the future
   let publish = c.publish_datetime ? new Date(c.publish_datetime) : null;
   if(!publish || isNaN(publish.getTime())){
-    const s = loadSettings();
-    publish = nextOccurrenceInOrNextWeek(s.publishDay, s.publishTime);
+    publish = nextOccurrence(s.publishDay, s.publishTime);
+    updateContent(contentId, { publish_datetime: publish.toISOString(), week: getISOWeek(publish) });
+  }
+  if(publish.getTime() <= new Date().getTime()){
+    publish = nextOccurrence(s.publishDay, s.publishTime);
     updateContent(contentId, { publish_datetime: publish.toISOString(), week: getISOWeek(publish) });
   }
 
-  const now = new Date();
-  // If publish is in the past, move it one week forward (safety)
-  if(publish.getTime() <= now.getTime()){
-    publish = new Date(publish.getTime() + 7*24*60*60*1000);
-    updateContent(contentId, { publish_datetime: publish.toISOString(), week: getISOWeek(publish) });
-  }
-
-  // Define plan steps in order (compression happens automatically)
-  
-  const sset = loadSettings();
-  const ap = (sset.autoplan || {});
   const steps = [];
-  if(ap.outline) steps.push({name:"Outline / Skript", cat:"Script", dur:60, energy:"High", daysBefore:6});
-  if(ap.recprep) steps.push({name:"Aufnahme vorbereiten", cat:"Admin", dur:30, energy:"Medium", daysBefore:6});
-  if(ap.record) steps.push({name:"Aufnahme", cat:"Recording", dur:150, energy:"High", daysBefore:5});
+  if(ap.outline)  steps.push({name:"Outline / Skript", cat:"Script", dur:60, energy:"High", daysBefore:6});
+  if(ap.recprep)  steps.push({name:"Aufnahme vorbereiten", cat:"Admin", dur:30, energy:"Medium", daysBefore:6});
+  if(ap.record)   steps.push({name:"Aufnahme", cat:"Recording", dur:150, energy:"High", daysBefore:5});
   if(ap.edit_rough) steps.push({name:"Schnitt (Grob)", cat:"Editing", dur:120, energy:"High", daysBefore:4});
-  if(ap.edit_fine) steps.push({name:"Schnitt (Fein + Audio)", cat:"Editing", dur:120, energy:"High", daysBefore:3});
-  if(ap.thumb) steps.push({name:"Thumbnail", cat:"Thumbnail", dur:60, energy:"Medium", daysBefore:2});
-  if(ap.title) steps.push({name:"Titel/Description", cat:"Upload", dur:45, energy:"Low", daysBefore:2});
+  if(ap.edit_fine)  steps.push({name:"Schnitt (Fein + Audio)", cat:"Editing", dur:120, energy:"High", daysBefore:3});
+  if(ap.thumb)    steps.push({name:"Thumbnail", cat:"Thumbnail", dur:60, energy:"Medium", daysBefore:2});
+  if(ap.title)    steps.push({name:"Titel/Description", cat:"Upload", dur:45, energy:"Low", daysBefore:2});
   if(ap.chapters) steps.push({name:"Kapitelmarken", cat:"Upload", dur:30, energy:"Low", daysBefore:1});
-  if(ap.qa) steps.push({name:"Final QA", cat:"Upload", dur:20, energy:"Low", daysBefore:1});
-  if(ap.upload) steps.push({name:"Upload / Schedule", cat:"Upload", dur:30, energy:"Low", daysBefore:1});
+  if(ap.qa)       steps.push({name:"Final QA", cat:"Upload", dur:20, energy:"Low", daysBefore:1});
+  if(ap.upload)   steps.push({name:"Upload / Schedule", cat:"Upload", dur:30, energy:"Low", daysBefore:1});
 
+  // Remove old auto tasks with same names (replan)
+  const names = new Set(steps.map(x=>x.name));
+  state.tasks = state.tasks.filter(t => !(t.content_id===contentId && names.has(t.task_name)));
 
-  // Remove existing auto tasks with same names (so it can re-plan)
-  const names = new Set(steps.map(s => s.name));
-  state.tasks = state.tasks.filter(t => !(t.content_id === contentId && names.has(t.task_name)));
-
-  // Create new tasks with clamped due dates and monotonic ordering
-  let lastDue = null;
-  let orderBase = state.tasks.filter(t => t.content_id === contentId).length;
-  const workStart = (sset.workStartTime || "17:00");
+  const workStart = s.workStartTime || "17:00";
   const perDayCursor = {};
+  let orderBase = state.tasks.filter(t=>t.content_id===contentId).length;
 
   for(const step of steps){
     let due = new Date(publish.getTime() - step.daysBefore*24*60*60*1000);
-    // Set a reasonable time: start at workStart and stack tasks sequentially on the same day
     const key = dayKey(due);
+
+    // place time cursor
     if(!perDayCursor[key]){
       const parts = String(workStart).split(":");
-      const hh = parseInt(parts[0]||"17",10);
-      const mm = parseInt(parts[1]||"0",10);
+      const hh = parseInt(parts[0] || "17", 10);
+      const mm = parseInt(parts[1] || "0", 10);
       due.setHours(hh, mm, 0, 0);
     } else {
       due = new Date(perDayCursor[key]);
     }
-    due = clampNotPast(due, workStart);
-    // advance cursor by duration + 15min buffer
-    perDayCursor[key] = new Date(due.getTime() + (step.dur + 15)*60*1000).toISOString();
 
-    if(lastDue && due.getTime() < lastDue.getTime()){
-      // keep order non-decreasing; push 30min after last
-      due = new Date(lastDue.getTime() + 30*60*1000);
-    }
-    lastDue = due;
+    due = clampNotPast(due, workStart);
+
+    // advance cursor by duration + 15 min buffer
+    perDayCursor[key] = new Date(due.getTime() + (step.dur + 15)*60*1000).toISOString();
 
     state.tasks.push({
       id: uid("t"),
@@ -585,269 +398,63 @@ function autoPlanVideoTasks(contentId){
   saveState(state);
 }
 
-
-function updateContent(id, patch){
-  const state = loadState();
-  const idx = state.content.findIndex(x => x.id === id);
-  if(idx < 0) return;
-  state.content[idx] = {...state.content[idx], ...patch};
-  saveState(state);
-}
-function updateTask(id, patch){
-  const state = loadState();
-  const idx = state.tasks.findIndex(x => x.id === id);
-  if(idx < 0) return;
-  state.tasks[idx] = {...state.tasks[idx], ...patch};
-  saveState(state);
-}
-function deleteContent(id){
-  const state = loadState();
-  state.content = state.content.filter(c => c.id !== id);
-  state.tasks = state.tasks.filter(t => t.content_id !== id);
-  saveState(state);
-}
-function deleteTask(id){
-  const state = loadState();
-  state.tasks = state.tasks.filter(t => t.id !== id);
-  saveState(state);
-}
-
-const els = {
-  subtitle: document.getElementById("subtitle"),
-  weekFocus: document.getElementById("weekFocus"),
-  nextActions: document.getElementById("nextActions"),
-  weekTasks: document.getElementById("weekTasks"),
-  filterEnergy: document.getElementById("filterEnergy"),
-  btnResetFilters: document.getElementById("btnResetFilters"),
-  btnCreateWeeklyVideo: document.getElementById("btnCreateWeeklyVideo"),
-  kanban: document.getElementById("kanban"),
-  btnNewContent: document.getElementById("btnNewContent"),
-  newType: document.getElementById("newType"),
-  newTitle: document.getElementById("newTitle"),
-  newSeries: document.getElementById("newSeries"),
-  newStatus: document.getElementById("newStatus"),
-  newPublish: document.getElementById("newPublish"),
-  newPriority: document.getElementById("newPriority"),
-  btnCreate: document.getElementById("btnCreate"),
-  contentList: document.getElementById("contentList"),
-
-  setPublishDay: document.getElementById("setPublishDay"),
-  setPublishTime: document.getElementById("setPublishTime"),
-  setStreamDay: document.getElementById("setStreamDay"),
-  setStreamTime: document.getElementById("setStreamTime"),
-  btnSaveSettings: document.getElementById("btnSaveSettings"),
-  btnResetSettings: document.getElementById("btnResetSettings"),
-  btnCreateWeeklyPlan: document.getElementById("btnCreateWeeklyPlan"),
-  btnExportData: document.getElementById("btnExportData"),
-  btnImportData: document.getElementById("btnImportData"),
-  settingsSummary: document.getElementById("settingsSummary"),
-
-  setWorkStartTime: document.getElementById("setWorkStartTime"),
-  ap_outline: document.getElementById("ap_outline"),
-  ap_recprep: document.getElementById("ap_recprep"),
-  ap_record: document.getElementById("ap_record"),
-  ap_edit_rough: document.getElementById("ap_edit_rough"),
-  ap_edit_fine: document.getElementById("ap_edit_fine"),
-  ap_thumb: document.getElementById("ap_thumb"),
-  ap_title: document.getElementById("ap_title"),
-  ap_chapters: document.getElementById("ap_chapters"),
-  ap_qa: document.getElementById("ap_qa"),
-  ap_upload: document.getElementById("ap_upload"),
-
-
-  calRange: document.getElementById("calRange"),
-  btnAutoPlanAll: document.getElementById("btnAutoPlanAll"),
-  calendarList: document.getElementById("calendarList"),
-
-
-};
-
-
-function render(){
-  const state = loadState();
-  const now = new Date();
-  const week = getISOWeek(now);
-  if(els.subtitle) els.subtitle.textContent = `Woche: ${week} • Lokal gespeichert (offline)`;
-
-  // Content list
-  if(els.contentList){
-    els.contentList.innerHTML = "";
-    if(!state.content.length){
-      els.contentList.innerHTML = `<div class="muted">Noch kein Content vorhanden.</div>`;
-    } else {
-      for(const c of state.content){
-        els.contentList.appendChild(contentFullCard(c));
-      }
-    }
-  }
-
-  renderCalendar();
-}
-
-
-  els.contentList.innerHTML = "";
-  if(!state.content.length){
-    els.contentList.innerHTML = `<div class="muted">Noch kein Content vorhanden.</div>`;
-  } else {
-    for(const c of state.content) els.contentList.appendChild(contentFullCard(c));
-  }
-  renderCalendar();
-}
-
-
+/* ---------- Calendar render ---------- */
 function renderCalendar(){
-  if(!els.calendarList) return;
+  const list = document.getElementById("calendarList");
+  const weeks = parseInt(document.getElementById("calWeeks").value || "2", 10);
   const state = loadState();
-  const rangeDays = parseInt((els.calRange && els.calRange.value) || "14", 10);
   const now = new Date();
-  const start = new Date(now);
-  start.setHours(0,0,0,0);
+  const ws0 = startOfWeek(now);
 
-  // Group tasks by day (0:00)
-  const tasksByDay = {};
-  for(const t of state.tasks){
-    if(!t.due_date) continue;
-    const d = new Date(t.due_date);
-    d.setHours(0,0,0,0);
-    const key = d.toISOString();
-    (tasksByDay[key] ||= []).push(t);
-  }
-
-  // Group publishes by day
-  const pubsByDay = {};
-  for(const c of state.content){
-    if(!c.publish_datetime) continue;
-    const d = new Date(c.publish_datetime);
-    d.setHours(0,0,0,0);
-    const key = d.toISOString();
-    (pubsByDay[key] ||= []).push(c);
-  }
-
-  els.calendarList.innerHTML = "";
-
-  for(let i=0;i<rangeDays;i++){
-    const day = new Date(start);
-    day.setDate(start.getDate()+i);
-    const key = day.toISOString();
-
-    const dayCard = document.createElement("div");
-    dayCard.className = "card";
-    const title = day.toLocaleDateString(undefined, { weekday:"long", year:"numeric", month:"2-digit", day:"2-digit" });
-
-    const tasks = (tasksByDay[key] || []).slice().sort((a,b)=> new Date(a.due_date)-new Date(b.due_date));
-    const pubs = (pubsByDay[key] || []).slice().sort((a,b)=> (a.type||"").localeCompare(b.type||""));
-
-    let inner = `<div class="row" style="justify-content: space-between;">
-      <div><div style="font-weight:650">${title}</div><div class="muted small">${i===0 ? "Heute" : ""}</div></div>
-      <div class="row">
-        ${pubs.map(p=>`<span class="pill">${p.type}: ${escapeHtml(p.title_working)}</span>`).join("")}
-      </div>
-    </div>`;
-
-    if(!tasks.length && !pubs.length){
-      inner += `<div class="muted" style="margin-top:8px;">—</div>`;
-    } else {
-      if(tasks.length){
-        inner += `<div class="hr"></div><div class="muted">Tasks</div><div class="list" style="margin-top:8px;">`;
-        for(const t of tasks){
-          const c = state.content.find(x=>x.id===t.content_id);
-          inner += `<div class="item">
-            <div class="row" style="justify-content: space-between;">
-              <div>
-                <div style="font-weight:650">${escapeHtml(t.task_name)} <span class="pill">${t.status}</span></div>
-                <div class="muted">${escapeHtml(t.category)} • ${t.energy} • ${t.duration_min} min • ${new Date(t.due_date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                ${c ? `<div class="muted small">Content: ${escapeHtml(c.title_working)}</div>` : ``}
-              </div>
-              <div class="row">
-                <select onchange="window.__setTaskStatus('${t.id}', this.value)">
-                  ${["To Do","Doing","Done"].map(s => `<option ${t.status===s?"selected":""}>${s}</option>`).join("")}
-                </select>
-              </div>
-            </div>
-          </div>`;
-        }
-        inner += `</div>`;
-      }
-    }
-
-    dayCard.innerHTML = inner;
-    els.calendarList.appendChild(dayCard);
-  }
-}
-
-
-
-function renderCalendar(){
-  if(!els.calendarList) return;
-  const state = loadState();
-  const weeks = parseInt((els.calRange && els.calRange.value) || "2", 10);
-  const now = new Date();
-  const start = startOfWeek(now); // Monday 00:00
-  start.setHours(0,0,0,0);
-
-  // helper to format time
-  const fmtTime = (iso) => {
-    const d = new Date(iso);
-    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-  };
-
-  els.calendarList.innerHTML = "";
+  list.innerHTML = "";
 
   for(let w=0; w<weeks; w++){
-    const ws = new Date(start);
-    ws.setDate(start.getDate() + w*7);
-    const we = new Date(ws);
-    we.setDate(ws.getDate()+7);
+    const ws = new Date(ws0); ws.setDate(ws0.getDate()+w*7);
+    const we = new Date(ws); we.setDate(ws.getDate()+7);
 
-    const weekKey = getISOWeek(ws);
     const weekCard = document.createElement("div");
     weekCard.className = "card";
-
     const rangeLabel = `${ws.toLocaleDateString(undefined,{day:'2-digit',month:'2-digit'})} – ${new Date(we.getTime()-1).toLocaleDateString(undefined,{day:'2-digit',month:'2-digit'})}`;
     weekCard.innerHTML = `<div class="row" style="justify-content: space-between;">
       <div>
-        <div style="font-weight:650">Woche ${weekKey}</div>
-        <div class="muted small">${rangeLabel}</div>
+        <div style="font-weight:650">Woche ${getISOWeek(ws)}</div>
+        <div class="muted">${rangeLabel}</div>
       </div>
       <div class="pill">${w===0 ? "Aktuelle Woche" : ""}</div>
     </div>`;
 
-    // days
     for(let i=0;i<7;i++){
-      const day = new Date(ws);
-      day.setDate(ws.getDate()+i);
+      const day = new Date(ws); day.setDate(ws.getDate()+i);
       const dayStart = new Date(day); dayStart.setHours(0,0,0,0);
       const dayEnd = new Date(dayStart); dayEnd.setDate(dayStart.getDate()+1);
 
-      // tasks of day
       const tasks = state.tasks
-        .filter(t => t.due_date)
-        .filter(t => {
+        .filter(t=>t.due_date)
+        .filter(t=>{
           const d = new Date(t.due_date);
-          return d >= dayStart && d < dayEnd;
+          return d>=dayStart && d<dayEnd;
         })
         .sort((a,b)=> new Date(a.due_date)-new Date(b.due_date));
 
-      // publishes of day
       const pubs = state.content
-        .filter(c => c.publish_datetime)
-        .filter(c => {
+        .filter(c=>c.publish_datetime)
+        .filter(c=>{
           const d = new Date(c.publish_datetime);
-          return d >= dayStart && d < dayEnd;
+          return d>=dayStart && d<dayEnd;
         });
 
-      const dayHeader = document.createElement("div");
-      dayHeader.style.marginTop = "12px";
-      dayHeader.innerHTML = `<div class="row" style="justify-content: space-between;">
+      const header = document.createElement("div");
+      header.style.marginTop = "12px";
+      header.innerHTML = `<div class="row" style="justify-content: space-between;">
         <div>
           <div style="font-weight:650">${day.toLocaleDateString(undefined,{weekday:'long', day:'2-digit', month:'2-digit'})}</div>
-          <div class="muted small">${(dayStart.toDateString()===new Date().toDateString()) ? "Heute" : ""}</div>
+          <div class="muted">${dayStart.toDateString()===new Date().toDateString() ? "Heute" : ""}</div>
         </div>
         <div class="row">
           ${pubs.map(p=>`<span class="pill">${p.type}: ${escapeHtml(p.title_working)}</span>`).join("")}
         </div>
       </div>`;
-      weekCard.appendChild(dayHeader);
+      weekCard.appendChild(header);
 
       if(!tasks.length && !pubs.length){
         const empty = document.createElement("div");
@@ -859,271 +466,194 @@ function renderCalendar(){
       }
 
       if(tasks.length){
-        const list = document.createElement("div");
-        list.className = "list";
-        list.style.marginTop = "8px";
+        const tlist = document.createElement("div");
+        tlist.className = "list";
+        tlist.style.marginTop = "8px";
 
         for(const t of tasks){
           const c = state.content.find(x=>x.id===t.content_id);
           const done = t.status === "Done";
           const item = document.createElement("div");
           item.className = "item";
+          const time = new Date(t.due_date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
           item.innerHTML = `
             <div class="row" style="justify-content: space-between;">
               <div style="min-width: 220px;">
                 <div style="font-weight:650">${escapeHtml(t.task_name)} ${done ? '<span class="pill">✓</span>' : ''}</div>
-                <div class="muted">${escapeHtml(t.category)} • ${t.energy} • ${t.duration_min} min • ${fmtTime(t.due_date)}</div>
-                ${c ? `<div class="muted small">Content: ${escapeHtml(c.title_working)}</div>` : ``}
+                <div class="muted">${escapeHtml(t.category)} • ${t.duration_min} min • ${time}</div>
+                ${c ? `<div class="muted">Content: ${escapeHtml(c.title_working)}</div>` : ``}
               </div>
               <div class="row">
-                <label class="small"><input type="checkbox" ${done ? "checked" : ""} onchange="window.__toggleDone('${t.id}', this.checked)" /> Fertig</label>
+                <label class="muted"><input type="checkbox" ${done ? "checked" : ""} onchange="updateTask('${t.id}', {status: this.checked ? 'Done' : 'To Do'}); render();" /> Fertig</label>
               </div>
             </div>
           `;
-          list.appendChild(item);
+          tlist.appendChild(item);
         }
-        weekCard.appendChild(list);
+        weekCard.appendChild(tlist);
       }
     }
 
-    els.calendarList.appendChild(weekCard);
+    list.appendChild(weekCard);
   }
 }
 
-
-function taskCard(t, compact){
+/* ---------- UI render ---------- */
+function renderContentList(){
+  const box = document.getElementById("contentList");
   const state = loadState();
-  const c = state.content.find(x => x.id === t.content_id);
-  const el = document.createElement("div");
-  el.className = "item";
-  el.innerHTML = `
-    <div class="row" style="justify-content: space-between;">
-      <div>
-        <div style="font-weight:650">${escapeHtml(t.task_name)}</div>
-        <div class="muted">${escapeHtml(t.category)} • ${t.energy} • ${t.duration_min} min • Due: ${fmtDateTime(t.due_date)}</div>
-        ${compact && c ? `<div class="muted">Content: ${escapeHtml(c.title_working)}</div>` : ""}
+  box.innerHTML = "";
+  if(!state.content.length){
+    box.innerHTML = '<div class="muted">Noch kein Content vorhanden.</div>';
+    return;
+  }
+  for(const c of state.content){
+    const tasks = state.tasks.filter(t=>t.content_id===c.id);
+    const done = tasks.filter(t=>t.status==="Done").length;
+    const total = tasks.length;
+    const card = document.createElement("div");
+    card.className = "item";
+    card.innerHTML = `
+      <div class="row" style="justify-content: space-between;">
+        <div>
+          <div style="font-weight:650">${escapeHtml(c.title_working)} <span class="pill">${c.type}</span></div>
+          <div class="muted">${escapeHtml(c.game_or_series||"")} • Publish: ${c.publish_datetime ? new Date(c.publish_datetime).toLocaleString() : "—"}</div>
+          <div class="muted">Tasks: ${done}/${total}</div>
+        </div>
+        <div class="row">
+          ${c.type==="Video" ? `<button class="secondary" onclick="autoPlanVideoTasks('${c.id}'); render();">Auto-Plan</button>` : ``}
+          <button class="danger" onclick="if(confirm('Content wirklich löschen?')){ deleteContent('${c.id}'); render(); }">✕</button>
+        </div>
       </div>
-      <div class="row">
-        <select onchange="window.__setTaskStatus('${t.id}', this.value)">
-          ${["To Do","Doing","Done"].map(s => `<option ${t.status===s?"selected":""}>${s}</option>`).join("")}
-        </select>
-        <button class="danger" onclick="window.__delTask('${t.id}')">✕</button>
-      </div>
-    </div>
-  `;
-  return el;
+    `;
+    box.appendChild(card);
+  }
 }
 
-function contentFullCard(c){
-  const state = loadState();
-  const tasks = state.tasks.filter(t => t.content_id === c.id).sort((a,b)=> (a.order-b.order));
-  const done = tasks.filter(t => t.status==="Done").length;
-  const total = tasks.length;
+function renderSettingsUI(){
+  const s = loadSettings();
+  document.getElementById("setPublishDay").value = String(s.publishDay);
+  document.getElementById("setPublishTime").value = s.publishTime;
+  document.getElementById("setStreamDay").value = String(s.streamDay);
+  document.getElementById("setStreamTime").value = s.streamTime;
+  document.getElementById("setWorkStartTime").value = s.workStartTime || "17:00";
 
-  const el = document.createElement("div");
-  el.className = "item";
-  el.innerHTML = `
-    <div class="row" style="justify-content: space-between;">
-      <div>
-        <div style="font-weight:650">${escapeHtml(c.title_working)} <span class="pill">${c.type}</span> <span class="pill">${c.status}</span></div>
-        <div class="muted">${escapeHtml(c.game_or_series||"")} • Woche ${c.week} • Publish: ${c.publish_datetime?fmtDateTime(c.publish_datetime):"—"}</div>
-        <div class="muted">Tasks: ${done}/${total}</div>
-      </div>
-      <div class="row">
-        <select onchange="window.__setContentStatus('${c.id}', this.value)">
-          ${Statuses.map(s => `<option ${c.status===s?"selected":""}>${s}</option>`).join("")}
-        </select>
-        <button class="secondary" onclick="window.__addDefaults('${c.id}')">+ Standard-Tasks</button>
-        <button class="secondary" onclick="window.__autoPlan('${c.id}')">Auto-Plan</button>
-        <button class="secondary" onclick="window.__editLinks('${c.id}')">Links</button>
-        <button class="danger" onclick="window.__delContent('${c.id}')">✕</button>
-      </div>
-    </div>
-  `;
-  return el;
+  const ap = s.autoplan || defaultSettings().autoplan;
+  document.getElementById("ap_outline").checked = !!ap.outline;
+  document.getElementById("ap_recprep").checked = ap.recprep !== false;
+  document.getElementById("ap_record").checked = ap.record !== false;
+  document.getElementById("ap_edit_rough").checked = ap.edit_rough !== false;
+  document.getElementById("ap_edit_fine").checked = ap.edit_fine !== false;
+  document.getElementById("ap_thumb").checked = ap.thumb !== false;
+  document.getElementById("ap_title").checked = ap.title !== false;
+  document.getElementById("ap_chapters").checked = ap.chapters !== false;
+  document.getElementById("ap_qa").checked = !!ap.qa;
+  document.getElementById("ap_upload").checked = ap.upload !== false;
 }
 
-function escapeHtml(str){
-  return String(str).replace(/[&<>"']/g, s => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[s]));
+function render(){
+  const now = new Date();
+  document.getElementById("subtitle").textContent = `Woche: ${getISOWeek(now)} • Lokal gespeichert`;
+  renderContentList();
+  renderCalendar();
 }
 
-window.__setContentStatus = (id, status) => { updateContent(id, {status}); render(); };
-window.__setTaskStatus = (id, status) => { updateTask(id, {status}); render(); };
-window.__toggleDone = (id, checked) => { updateTask(id, {status: checked ? "Done" : "To Do"}); render(); };
-window.__delContent = (id) => { if(confirm("Content wirklich löschen?")) { deleteContent(id); render(); } };
-window.__delTask = (id) => { if(confirm("Task löschen?")) { deleteTask(id); render(); } };
-window.__addDefaults = (id) => { addDefaultVideoTasks(id); render(); };
-window.__autoPlan = (id) => { autoPlanVideoTasks(id); render(); };
-
-window.__editNotes = (id) => {
-  const state = loadState();
-  const c = state.content.find(x => x.id === id);
-  if(!c) return;
-  const n = prompt("Notizen (überschreibt):", c.notes || "");
-  if(n !== null){ updateContent(id, {notes: n}); render(); }
-};
-
-window.__editLinks = (id) => {
-  const state = loadState();
-  const c = state.content.find(x => x.id === id);
-  if(!c) return;
-  const pf = prompt("Projektordner-Link:", c.project_folder_link || "");
-  if(pf === null) return;
-  const yl = prompt("YouTube-Link (nach Upload):", c.youtube_link || "");
-  if(yl === null) return;
-  updateContent(id, {project_folder_link: pf, youtube_link: yl});
-  render();
-};
-
+/* ---------- Events ---------- */
 document.querySelectorAll(".tab").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     const tab = btn.dataset.tab;
-    document.getElementById("tab-week").style.display = tab==="week" ? "" : "none";
-    document.getElementById("tab-pipeline").style.display = tab==="pipeline" ? "" : "none";
-    document.getElementById("tab-calendar").style.display = tab==="calendar" ? "" : "none";
-    document.getElementById("tab-content").style.display = tab==="content" ? "" : "none";
-    document.getElementById("tab-settings").style.display = tab==="settings" ? "" : "none";
+    document.getElementById("tab-calendar").style.display = (tab==="calendar") ? "" : "none";
+    document.getElementById("tab-content").style.display  = (tab==="content")  ? "" : "none";
+    document.getElementById("tab-settings").style.display = (tab==="settings") ? "" : "none";
     renderSettingsUI();
     render();
   });
 });
 
-els.btnCreate.addEventListener("click", ()=>{
-  let publishVal = els.newPublish.value;
+document.getElementById("calWeeks").addEventListener("change", render);
+
+document.getElementById("btnAutoPlanAll").addEventListener("click", ()=>{
+  const state = loadState();
+  const vids = state.content.filter(c=>c.type==="Video" && c.status!=="Published");
+  for(const v of vids) autoPlanVideoTasks(v.id);
+  alert("Auto-Plan fertig.");
+  render();
+});
+
+document.getElementById("btnCreate").addEventListener("click", ()=>{
+  const s = loadSettings();
+  const type = document.getElementById("newType").value;
+  const title = document.getElementById("newTitle").value.trim();
+  const series = document.getElementById("newSeries").value.trim();
+  let publishVal = document.getElementById("newPublish").value;
+
   if(!publishVal){
-    const s = loadSettings();
-    if(els.newType.value === "Video"){
-      publishVal = toDatetimeLocalValue(nextOccurrenceInOrNextWeek(s.publishDay, s.publishTime));
-    } else {
-      publishVal = toDatetimeLocalValue(nextOccurrenceInOrNextWeek(s.streamDay, s.streamTime));
-    }
+    if(type==="Video") publishVal = toDatetimeLocalValue(nextOccurrence(s.publishDay, s.publishTime));
+    else publishVal = toDatetimeLocalValue(nextOccurrence(s.streamDay, s.streamTime));
   }
-  const item = createContent({
-    type: els.newType.value,
-    title: els.newTitle.value.trim(),
-    series: els.newSeries.value.trim(),
-    status: els.newStatus.value,
-    publish: publishVal,
-    priority: els.newPriority.value
-  });
-  els.newTitle.value = "";
+
+  const item = createContent({type, title, series, publish: publishVal, priority: document.getElementById("newPriority").value});
+  document.getElementById("newTitle").value = "";
+  document.getElementById("newPublish").value = "";
+
   if(item.type==="Video"){
-    const ok = confirm("Auto-Plan (empfohlen) für dieses Video erstellen?");
-    if(ok) autoPlanVideoTasks(item.id);
-  }
-  if(item.type==="Stream"){
-    const okS = confirm("Standard-Tasks für diesen Stream hinzufügen?");
-    if(okS) addDefaultStreamTasks(item.id);
+    if(confirm("Auto-Plan für dieses Video erstellen?")) autoPlanVideoTasks(item.id);
   }
   render();
 });
 
-  const publish = nextOccurrenceInOrNextWeek(s.publishDay, s.publishTime);
-  const item = createContent({
-    type:"Video",
-    title:"Video der Woche",
-    series:"",
-    status:"Planned",
-    publish: toDatetimeLocalValue(publish),
-    priority: 1
-  });
-  addDefaultVideoTasks(item.id);
+document.getElementById("btnCreateWeeklyPlan").addEventListener("click", ()=>{
+  const s = loadSettings();
+  const pub = nextOccurrence(s.publishDay, s.publishTime);
+  const video = createContent({type:"Video", title:"Video der Woche", series:"", publish: toDatetimeLocalValue(pub), priority: 1});
+  autoPlanVideoTasks(video.id);
+
+  const addStream = confirm("Auch einen Stream für diese Woche erstellen?");
+  if(addStream){
+    const st = nextOccurrence(s.streamDay, s.streamTime);
+    createContent({type:"Stream", title:"Stream der Woche", series:"", publish: toDatetimeLocalValue(st), priority: 2});
+  }
+  alert("Plan erstellt.");
   render();
 });
 
+document.getElementById("btnSaveSettings").addEventListener("click", ()=>{
+  const s = loadSettings();
+  s.publishDay = Number(document.getElementById("setPublishDay").value);
+  s.publishTime = document.getElementById("setPublishTime").value || s.publishTime;
+  s.streamDay = Number(document.getElementById("setStreamDay").value);
+  s.streamTime = document.getElementById("setStreamTime").value || s.streamTime;
+  s.workStartTime = document.getElementById("setWorkStartTime").value || s.workStartTime;
 
+  s.autoplan = {
+    outline: document.getElementById("ap_outline").checked,
+    recprep: document.getElementById("ap_recprep").checked,
+    record: document.getElementById("ap_record").checked,
+    edit_rough: document.getElementById("ap_edit_rough").checked,
+    edit_fine: document.getElementById("ap_edit_fine").checked,
+    thumb: document.getElementById("ap_thumb").checked,
+    title: document.getElementById("ap_title").checked,
+    chapters: document.getElementById("ap_chapters").checked,
+    qa: document.getElementById("ap_qa").checked,
+    upload: document.getElementById("ap_upload").checked,
+  };
 
-if(els.calRange){
-  els.calRange.addEventListener("change", render);
-}
-if(els.btnAutoPlanAll){
-  els.btnAutoPlanAll.addEventListener("click", ()=>{
-    const state = loadState();
-    const videos = state.content.filter(c => c.type==="Video" && c.status !== "Published");
-    for(const v of videos){
-      autoPlanVideoTasks(v.id);
-    }
-    alert("Auto-Plan fertig.");
-    render();
-  });
-}
+  saveSettings(s);
+  alert("Gespeichert.");
+  renderSettingsUI();
+  render();
+});
 
+document.getElementById("btnResetSettings").addEventListener("click", ()=>{
+  saveSettings(defaultSettings());
+  alert("Zurückgesetzt.");
+  renderSettingsUI();
+  render();
+});
 
-render();
-
-
-/* -------------------- Settings handlers -------------------- */
-if(els.btnSaveSettings){
-  els.btnSaveSettings.addEventListener("click", ()=>{
-    const s = loadSettings();
-    s.publishDay = Number(els.setPublishDay.value);
-    s.publishTime = els.setPublishTime.value || s.publishTime;
-    s.streamDay = Number(els.setStreamDay.value);
-    s.streamTime = els.setStreamTime.value || s.streamTime;
-
-    s.workStartTime = (els.setWorkStartTime && els.setWorkStartTime.value) ? els.setWorkStartTime.value : (s.workStartTime || "17:00");
-    s.autoplan = {
-      outline: !!(els.ap_outline && els.ap_outline.checked),
-      recprep: !!(els.ap_recprep && els.ap_recprep.checked),
-      record: !!(els.ap_record && els.ap_record.checked),
-      edit_rough: !!(els.ap_edit_rough && els.ap_edit_rough.checked),
-      edit_fine: !!(els.ap_edit_fine && els.ap_edit_fine.checked),
-      thumb: !!(els.ap_thumb && els.ap_thumb.checked),
-      title: !!(els.ap_title && els.ap_title.checked),
-      chapters: !!(els.ap_chapters && els.ap_chapters.checked),
-      qa: !!(els.ap_qa && els.ap_qa.checked),
-      upload: !!(els.ap_upload && els.ap_upload.checked)
-    };
-
-    saveSettings(s);
-    alert("Gespeichert.");
-    renderSettingsUI();
-  });
-}
-if(els.btnResetSettings){
-  els.btnResetSettings.addEventListener("click", ()=>{
-    const s = defaultSettings();
-    saveSettings(s);
-    renderSettingsUI();
-    alert("Zurückgesetzt.");
-  });
-}
-
-if(els.btnCreateWeeklyPlan){
-  els.btnCreateWeeklyPlan.addEventListener("click", ()=>{
-    const s = loadSettings();
-    const pub = nextOccurrenceInOrNextWeek(s.publishDay, s.publishTime);
-    const video = createContent({
-      type:"Video",
-      title:"Video der Woche",
-      series:"",
-      status:"Planned",
-      publish: toDatetimeLocalValue(pub),
-      priority: 1
-    });
-    autoPlanVideoTasks(video.id);
-
-    const addStream = confirm("Auch einen Stream für diese Woche erstellen?");
-    if(addStream){
-      const st = nextOccurrenceInOrNextWeek(s.streamDay, s.streamTime);
-      const stream = createContent({
-        type:"Stream",
-        title:"Stream der Woche",
-        series:"",
-        status:"Planned",
-        publish: toDatetimeLocalValue(st),
-        priority: 2
-      });
-      addDefaultStreamTasks(stream.id);
-    }
-    alert("Plan erstellt. Schau in „Diese Woche“ oder „Pipeline“.");
-    render();
-  });
-}
-
-/* -------------------- Backup export/import -------------------- */
+/* Backup */
 function downloadTextFile(filename, text){
   const blob = new Blob([text], {type:"application/json"});
   const url = URL.createObjectURL(blob);
@@ -1135,45 +665,61 @@ function downloadTextFile(filename, text){
   a.remove();
   URL.revokeObjectURL(url);
 }
-
-if(els.btnExportData){
-  els.btnExportData.addEventListener("click", ()=>{
-    const payload = {
-      version: "v1.2",
-      exported_at: new Date().toISOString(),
-      settings: loadSettings(),
-      data: loadState()
+document.getElementById("btnExportData").addEventListener("click", ()=>{
+  const payload = {
+    version: "v1.6",
+    exported_at: new Date().toISOString(),
+    settings: loadSettings(),
+    data: loadState()
+  };
+  downloadTextFile("creator_planner_backup.json", JSON.stringify(payload, null, 2));
+});
+document.getElementById("btnImportData").addEventListener("click", ()=>{
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json";
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const obj = JSON.parse(String(reader.result || ""));
+        if(obj.settings) saveSettings(obj.settings);
+        if(obj.data) saveState(obj.data);
+        alert("Import fertig.");
+        renderSettingsUI();
+        render();
+      } catch {
+        alert("Import fehlgeschlagen: ungültige JSON-Datei.");
+      }
     };
-    downloadTextFile("creator_planner_backup.json", JSON.stringify(payload, null, 2));
-  });
-}
+    reader.readAsText(file);
+  };
+  input.click();
+});
 
-if(els.btnImportData){
-  els.btnImportData.addEventListener("click", ()=>{
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json";
-    input.onchange = () => {
-      const file = input.files && input.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try{
-          const obj = JSON.parse(String(reader.result || ""));
-          if(obj.settings) saveSettings(obj.settings);
-          if(obj.data) saveState(obj.data);
-          alert("Import fertig.");
-          renderSettingsUI();
-          render();
-        } catch {
-          alert("Import fehlgeschlagen: ungültige JSON-Datei.");
-        }
-      };
-      reader.readAsText(file);
-    };
-    input.click();
-  });
-}
+/* Error capture (shows if anything breaks) */
+window.addEventListener("error", (e)=>{
+  const box = document.getElementById("errorBox");
+  box.style.display = "";
+  box.innerHTML = `<div style="font-weight:650">Fehler in der App</div>
+    <div class="muted">Wenn du mir das hier kopierst, kann ich es sofort fixen.</div>
+    <div class="hr"></div>
+    <pre style="white-space:pre-wrap; font-size:12px; margin:0;">${escapeHtml(String(e.message || e))}</pre>`;
+});
+window.addEventListener("unhandledrejection", (e)=>{
+  const box = document.getElementById("errorBox");
+  box.style.display = "";
+  box.innerHTML = `<div style="font-weight:650">Fehler (Promise)</div>
+    <div class="muted">Wenn du mir das hier kopierst, kann ich es sofort fixen.</div>
+    <div class="hr"></div>
+    <pre style="white-space:pre-wrap; font-size:12px; margin:0;">${escapeHtml(String(e.reason || e))}</pre>`;
+});
+
+/* Init */
+renderSettingsUI();
+render();
 
 // --- PWA: service worker registration ---
 if ("serviceWorker" in navigator) {
@@ -1181,7 +727,6 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   });
 }
-
 </script>
 </body>
 </html>

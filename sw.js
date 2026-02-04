@@ -1,4 +1,4 @@
-const CACHE_NAME = "creator-planner-v1-5";
+const CACHE_NAME = "creator-planner-v1-6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -25,7 +25,6 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
-  // Network-first for navigations, cache-first for static
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req).then((res) => {
@@ -36,7 +35,6 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
-
   event.respondWith(
     caches.match(req).then((cached) => cached || fetch(req))
   );
