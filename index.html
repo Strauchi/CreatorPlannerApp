@@ -33,6 +33,16 @@
     .split { display:grid; gap: 10px; grid-template-columns: 1fr; }
     @media (min-width: 860px){ .split { grid-template-columns: 1fr 1fr; } }
     .err { border-color:#783a4a; background:#2a1016; }
+  
+    .dow { font-size: 12px; color:#a9b0c3; padding: 6px 6px; text-align:center; border-radius:10px; border:1px solid #1b2130; background:#0c1220; }
+    .daycell { min-height: 92px; padding: 8px; border-radius: 12px; border: 1px solid #1b2130; background: #0c1220; cursor: pointer; }
+    .daycell.out { opacity: 0.45; }
+    .daycell.today { border-color: #3a4a78; background:#101b33; }
+    .daycell.selected { outline: 2px solid #3a4a78; }
+    .daynum { font-weight:650; font-size: 13px; }
+    .mini { margin-top:6px; display:grid; gap:4px; }
+    .miniItem { font-size: 12px; color:#e8eaf0; padding: 3px 6px; border-radius: 999px; border:1px solid #1b2130; background:#0b0d12; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
   </style>
 </head>
 <body>
@@ -49,26 +59,43 @@
   </div>
 
   <main>
+    
     <section id="tab-calendar">
       <div class="card">
-        <div class="row" style="justify-content: space-between;">
+        <div class="row" style="justify-content: space-between; align-items:flex-start;">
           <div>
             <div class="muted">Kalender</div>
-            <div class="muted">Wochen-Ansicht mit Tasks & Veröffentlichungen.</div>
+            <div class="muted">Monatsansicht (Grid) wie ein normaler Kalender. Tippe auf einen Tag für Details.</div>
           </div>
           <div class="row">
-            <select id="calWeeks">
-              <option value="2" selected>Nächste 2 Wochen</option>
-              <option value="4">Nächste 4 Wochen</option>
-              <option value="1">Nächste 1 Woche</option>
-            </select>
+            <button class="secondary" id="btnPrevMonth">◀</button>
+            <button class="secondary" id="btnToday">Heute</button>
+            <button class="secondary" id="btnNextMonth">▶</button>
+            <span class="pill" id="monthLabel"></span>
             <button class="secondary" id="btnAutoPlanAll">Auto-Plan: alle offenen Videos</button>
           </div>
         </div>
       </div>
+
       <div style="height:10px;"></div>
-      <div id="calendarList" class="list"></div>
+
+      <div class="card" style="padding:10px;">
+        <div id="monthGrid" style="
+          display:grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 6px;
+        "></div>
+      </div>
+
+      <div style="height:10px;"></div>
+
+      <div class="card">
+        <div class="muted" id="dayDetailTitle">Tag</div>
+        <div class="hr"></div>
+        <div id="dayDetailList" class="list"></div>
+      </div>
     </section>
+
 
     <section id="tab-content" style="display:none;">
       <div class="split">
@@ -399,103 +426,165 @@ function autoPlanVideoTasks(contentId){
 }
 
 /* ---------- Calendar render ---------- */
-function renderCalendar(){
-  const list = document.getElementById("calendarList");
-  const weeks = parseInt(document.getElementById("calWeeks").value || "2", 10);
-  const state = loadState();
-  const now = new Date();
-  const ws0 = startOfWeek(now);
 
+let __calMonth = new Date();  // current visible month
+let __selectedDay = null;
+
+function startOfMonth(d){
+  const x = new Date(d);
+  x.setDate(1); x.setHours(0,0,0,0);
+  return x;
+}
+function addMonths(d, delta){
+  const x = new Date(d);
+  x.setMonth(x.getMonth() + delta, 1);
+  x.setHours(0,0,0,0);
+  return x;
+}
+function sameDay(a,b){
+  return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function monthLabel(d){
+  return d.toLocaleDateString(undefined, { month:"long", year:"numeric" });
+}
+function toYMD(d){
+  const x = new Date(d); x.setHours(0,0,0,0);
+  return x.toISOString().slice(0,10);
+}
+
+function itemsForDay(state, dayStart){
+  const dayEnd = new Date(dayStart); dayEnd.setDate(dayStart.getDate()+1);
+
+  const pubs = state.content
+    .filter(c=>c.publish_datetime)
+    .filter(c=>{
+      const dt = new Date(c.publish_datetime);
+      return dt >= dayStart && dt < dayEnd;
+    })
+    .map(c=>({ kind:"publish", title:`${c.type}: ${c.title_working}`, contentId:c.id, time: new Date(c.publish_datetime) }));
+
+  const tasks = state.tasks
+    .filter(t=>t.due_date)
+    .filter(t=>{
+      const dt = new Date(t.due_date);
+      return dt >= dayStart && dt < dayEnd;
+    })
+    .sort((a,b)=> new Date(a.due_date) - new Date(b.due_date))
+    .map(t=>({ kind:"task", title:t.task_name, taskId:t.id, contentId:t.content_id, time: new Date(t.due_date), done: t.status==="Done" }));
+
+  return { pubs, tasks };
+}
+
+function renderDayDetails(day){
+  const state = loadState();
+  const title = document.getElementById("dayDetailTitle");
+  const list = document.getElementById("dayDetailList");
+  const d = new Date(day); d.setHours(0,0,0,0);
+  title.textContent = d.toLocaleDateString(undefined, { weekday:"long", year:"numeric", month:"2-digit", day:"2-digit" });
   list.innerHTML = "";
 
-  for(let w=0; w<weeks; w++){
-    const ws = new Date(ws0); ws.setDate(ws0.getDate()+w*7);
-    const we = new Date(ws); we.setDate(ws.getDate()+7);
+  const { pubs, tasks } = itemsForDay(state, d);
 
-    const weekCard = document.createElement("div");
-    weekCard.className = "card";
-    const rangeLabel = `${ws.toLocaleDateString(undefined,{day:'2-digit',month:'2-digit'})} – ${new Date(we.getTime()-1).toLocaleDateString(undefined,{day:'2-digit',month:'2-digit'})}`;
-    weekCard.innerHTML = `<div class="row" style="justify-content: space-between;">
-      <div>
-        <div style="font-weight:650">Woche ${getISOWeek(ws)}</div>
-        <div class="muted">${rangeLabel}</div>
-      </div>
-      <div class="pill">${w===0 ? "Aktuelle Woche" : ""}</div>
-    </div>`;
+  if(!pubs.length && !tasks.length){
+    list.innerHTML = '<div class="muted">—</div>';
+    return;
+  }
 
-    for(let i=0;i<7;i++){
-      const day = new Date(ws); day.setDate(ws.getDate()+i);
-      const dayStart = new Date(day); dayStart.setHours(0,0,0,0);
-      const dayEnd = new Date(dayStart); dayEnd.setDate(dayStart.getDate()+1);
+  if(pubs.length){
+    const box = document.createElement("div");
+    box.className = "item";
+    box.innerHTML = `<div style="font-weight:650">Veröffentlichungen</div><div class="hr"></div>` +
+      pubs.map(p=>`<div class="row" style="justify-content:space-between;">
+        <div>${escapeHtml(p.title)}</div>
+        <div class="muted">${p.time.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}</div>
+      </div>`).join("");
+    list.appendChild(box);
+  }
 
-      const tasks = state.tasks
-        .filter(t=>t.due_date)
-        .filter(t=>{
-          const d = new Date(t.due_date);
-          return d>=dayStart && d<dayEnd;
-        })
-        .sort((a,b)=> new Date(a.due_date)-new Date(b.due_date));
-
-      const pubs = state.content
-        .filter(c=>c.publish_datetime)
-        .filter(c=>{
-          const d = new Date(c.publish_datetime);
-          return d>=dayStart && d<dayEnd;
-        });
-
-      const header = document.createElement("div");
-      header.style.marginTop = "12px";
-      header.innerHTML = `<div class="row" style="justify-content: space-between;">
-        <div>
-          <div style="font-weight:650">${day.toLocaleDateString(undefined,{weekday:'long', day:'2-digit', month:'2-digit'})}</div>
-          <div class="muted">${dayStart.toDateString()===new Date().toDateString() ? "Heute" : ""}</div>
+  if(tasks.length){
+    const box = document.createElement("div");
+    box.className = "item";
+    box.innerHTML = `<div style="font-weight:650">Tasks</div><div class="hr"></div>`;
+    for(const t of tasks){
+      const c = state.content.find(x=>x.id===t.contentId);
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.justifyContent = "space-between";
+      row.style.alignItems = "center";
+      row.innerHTML = `
+        <div style="min-width:220px;">
+          <div style="font-weight:650">${escapeHtml(t.title)} ${t.done ? '<span class="pill">✓</span>' : ''}</div>
+          <div class="muted">${t.time.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})} ${c ? "• " + escapeHtml(c.title_working) : ""}</div>
         </div>
         <div class="row">
-          ${pubs.map(p=>`<span class="pill">${p.type}: ${escapeHtml(p.title_working)}</span>`).join("")}
-        </div>
-      </div>`;
-      weekCard.appendChild(header);
-
-      if(!tasks.length && !pubs.length){
-        const empty = document.createElement("div");
-        empty.className = "muted";
-        empty.style.marginTop = "6px";
-        empty.textContent = "—";
-        weekCard.appendChild(empty);
-        continue;
-      }
-
-      if(tasks.length){
-        const tlist = document.createElement("div");
-        tlist.className = "list";
-        tlist.style.marginTop = "8px";
-
-        for(const t of tasks){
-          const c = state.content.find(x=>x.id===t.content_id);
-          const done = t.status === "Done";
-          const item = document.createElement("div");
-          item.className = "item";
-          const time = new Date(t.due_date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-          item.innerHTML = `
-            <div class="row" style="justify-content: space-between;">
-              <div style="min-width: 220px;">
-                <div style="font-weight:650">${escapeHtml(t.task_name)} ${done ? '<span class="pill">✓</span>' : ''}</div>
-                <div class="muted">${escapeHtml(t.category)} • ${t.duration_min} min • ${time}</div>
-                ${c ? `<div class="muted">Content: ${escapeHtml(c.title_working)}</div>` : ``}
-              </div>
-              <div class="row">
-                <label class="muted"><input type="checkbox" ${done ? "checked" : ""} onchange="updateTask('${t.id}', {status: this.checked ? 'Done' : 'To Do'}); render();" /> Fertig</label>
-              </div>
-            </div>
-          `;
-          tlist.appendChild(item);
-        }
-        weekCard.appendChild(tlist);
-      }
+          <label class="muted"><input type="checkbox" ${t.done ? "checked" : ""} onchange="updateTask('${t.taskId}', {status: this.checked ? 'Done' : 'To Do'}); render();" /> Fertig</label>
+        </div>`;
+      box.appendChild(row);
     }
-
-    list.appendChild(weekCard);
+    list.appendChild(box);
   }
+}
+
+function renderMonthGrid(){
+  const state = loadState();
+  const grid = document.getElementById("monthGrid");
+  const label = document.getElementById("monthLabel");
+  if(label) label.textContent = monthLabel(__calMonth);
+
+  grid.innerHTML = "";
+  const dows = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+  for(const w of dows){
+    const el = document.createElement("div");
+    el.className = "dow";
+    el.textContent = w;
+    grid.appendChild(el);
+  }
+
+  const monthStart = startOfMonth(__calMonth);
+  const ws = startOfWeek(monthStart); // Monday before month start
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // 6 weeks grid
+  for(let i=0;i<42;i++){
+    const day = new Date(ws); day.setDate(ws.getDate()+i);
+    const inMonth = day.getMonth() === monthStart.getMonth();
+    const cell = document.createElement("div");
+    cell.className = "daycell" + (inMonth ? "" : " out") + (sameDay(day,today) ? " today" : "") + (sameDay(day,__selectedDay) ? " selected" : "");
+
+    const { pubs, tasks } = itemsForDay(state, day);
+    const doneCount = tasks.filter(t=>t.done).length;
+
+    cell.innerHTML = `
+      <div class="row" style="justify-content: space-between; align-items:baseline;">
+        <div class="daynum">${day.getDate()}</div>
+        <div class="muted" style="font-size:11px;">${tasks.length ? (doneCount + "/" + tasks.length) : ""}</div>
+      </div>
+      <div class="mini">
+        ${pubs.slice(0,1).map(p=>`<div class="miniItem">${escapeHtml(p.title)}</div>`).join("")}
+        ${tasks.slice(0,2).map(t=>`<div class="miniItem">${t.done ? "✓ " : ""}${escapeHtml(t.title)}</div>`).join("")}
+        ${(pubs.length + tasks.length) > 3 ? `<div class="muted" style="font-size:11px;">+${(pubs.length+tasks.length)-3} mehr</div>` : ``}
+      </div>
+    `;
+
+    cell.addEventListener("click", ()=>{
+      __selectedDay = new Date(day);
+      __selectedDay.setHours(0,0,0,0);
+      renderMonthGrid();
+      renderDayDetails(__selectedDay);
+    });
+
+    grid.appendChild(cell);
+  }
+
+  // default selection
+  if(!__selectedDay){
+    __selectedDay = today;
+    renderDayDetails(today);
+  }
+}
+
+function renderCalendar(){
+  renderMonthGrid();
 }
 
 /* ---------- UI render ---------- */
@@ -572,7 +661,6 @@ document.querySelectorAll(".tab").forEach(btn=>{
   });
 });
 
-document.getElementById("calWeeks").addEventListener("change", render);
 
 document.getElementById("btnAutoPlanAll").addEventListener("click", ()=>{
   const state = loadState();
@@ -582,6 +670,20 @@ document.getElementById("btnAutoPlanAll").addEventListener("click", ()=>{
   render();
 });
 
+
+document.getElementById("btnPrevMonth").addEventListener("click", ()=>{
+  __calMonth = addMonths(__calMonth, -1);
+  render();
+});
+document.getElementById("btnNextMonth").addEventListener("click", ()=>{
+  __calMonth = addMonths(__calMonth, +1);
+  render();
+});
+document.getElementById("btnToday").addEventListener("click", ()=>{
+  __calMonth = new Date();
+  __selectedDay = new Date(); __selectedDay.setHours(0,0,0,0);
+  render();
+});
 document.getElementById("btnCreate").addEventListener("click", ()=>{
   const s = loadSettings();
   const type = document.getElementById("newType").value;
