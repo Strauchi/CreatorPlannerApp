@@ -53,6 +53,7 @@
     <button class="tab active" data-tab="week">Diese Woche</button>
     <button class="tab" data-tab="pipeline">Pipeline</button>
     <button class="tab" data-tab="content">Content</button>
+    <button class="tab" data-tab="settings">Settings</button>
   </div>
 
   <main>
@@ -141,12 +142,146 @@
         </div>
       </div>
     </section>
+  
+    <!-- SETTINGS -->
+    <section id="tab-settings" style="display:none;">
+      <div class="split">
+        <div class="card">
+          <div class="muted">Standard-Zeiten</div>
+          <div class="small" style="margin-top:6px;">Diese Einstellungen steuern die Default-Planung für neue Wochen-Videos/Streams.</div>
+          <div class="hr"></div>
+
+          <div class="muted">Video-Upload</div>
+          <div class="row" style="margin-top:8px;">
+            <select id="setPublishDay">
+              <option value="0">Montag</option>
+              <option value="1">Dienstag</option>
+              <option value="2">Mittwoch</option>
+              <option value="3">Donnerstag</option>
+              <option value="4">Freitag</option>
+              <option value="5">Samstag</option>
+              <option value="6">Sonntag</option>
+            </select>
+            <input id="setPublishTime" type="time" />
+          </div>
+
+          <div class="hr"></div>
+          <div class="muted">Stream (optional)</div>
+          <div class="row" style="margin-top:8px;">
+            <select id="setStreamDay">
+              <option value="0">Montag</option>
+              <option value="1">Dienstag</option>
+              <option value="2">Mittwoch</option>
+              <option value="3">Donnerstag</option>
+              <option value="4">Freitag</option>
+              <option value="5">Samstag</option>
+              <option value="6">Sonntag</option>
+            </select>
+            <input id="setStreamTime" type="time" />
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button id="btnSaveSettings">Speichern</button>
+            <button class="secondary" id="btnResetSettings">Reset</button>
+          </div>
+
+          <div class="hr"></div>
+          <div class="muted">Tools</div>
+          <div class="row" style="margin-top:8px;">
+            <button class="secondary" id="btnExportData">Backup exportieren</button>
+            <button class="secondary" id="btnImportData">Backup importieren</button>
+          </div>
+          <div class="small muted" style="margin-top:8px;">Backup-Datei ist JSON. Du kannst sie z.B. in Google Drive speichern.</div>
+        </div>
+
+        <div class="card">
+          <div class="muted">Upload/Streaming-Plan</div>
+          <div class="small" style="margin-top:6px;">Erstellt Content für die aktuelle Woche nach deinen Standard-Zeiten.</div>
+          <div class="hr"></div>
+
+          <div class="row">
+            <button id="btnCreateWeeklyPlan">Plan für diese Woche erstellen</button>
+          </div>
+          <div class="small muted" style="margin-top:8px;">
+            Der Plan erstellt: 1 Video (immer) + optional 1 Stream, falls du ihn bestätigst.
+          </div>
+
+          <div class="hr"></div>
+          <div class="muted">Aktuelle Einstellungen</div>
+          <div id="settingsSummary" class="small" style="margin-top:8px;"></div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
 <script>
 const KEY = "creator_planner_local_v1";
 const Statuses = ["Idea","Planned","In Production","Ready","Scheduled","Published"];
 const KanbanCols = ["Idea","Planned","In Production","Ready","Scheduled","Published"];
+
+
+const SETTINGS_KEY = "creator_planner_settings_v1";
+
+function defaultSettings(){
+  return {
+    publishDay: 6,         // 0=Mon ... 6=Sun
+    publishTime: "18:00",
+    streamDay: 5,
+    streamTime: "20:00"
+  };
+}
+function loadSettings(){
+  const raw = localStorage.getItem(SETTINGS_KEY);
+  if(!raw){
+    const s = defaultSettings();
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    return s;
+  }
+  try {
+    const s = JSON.parse(raw);
+    return { ...defaultSettings(), ...s };
+  } catch {
+    const s = defaultSettings();
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    return s;
+  }
+}
+function saveSettings(s){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); }
+
+function dateInCurrentWeek(dayIndexMon0, timeHHMM){
+  const now = new Date();
+  const s = startOfWeek(now);
+  const d = new Date(s);
+  d.setDate(s.getDate() + Number(dayIndexMon0));
+  const parts = String(timeHHMM || "18:00").split(":");
+  const hh = parseInt(parts[0] || "0", 10);
+  const mm = parseInt(parts[1] || "0", 10);
+  d.setHours(hh, mm, 0, 0);
+  return d;
+}
+function toDatetimeLocalValue(dateObj){
+  const d = new Date(dateObj);
+  const pad = (n)=> String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderSettingsUI(){
+  const s = loadSettings();
+  if(els.setPublishDay) els.setPublishDay.value = String(s.publishDay);
+  if(els.setPublishTime) els.setPublishTime.value = s.publishTime;
+  if(els.setStreamDay) els.setStreamDay.value = String(s.streamDay);
+  if(els.setStreamTime) els.setStreamTime.value = s.streamTime;
+
+  const pub = dateInCurrentWeek(s.publishDay, s.publishTime);
+  const st = dateInCurrentWeek(s.streamDay, s.streamTime);
+  if(els.settingsSummary){
+    els.settingsSummary.innerHTML =
+      `<div><span class="pill">Video</span> ${pub.toLocaleString()}</div>` +
+      `<div style="margin-top:6px;"><span class="pill">Stream</span> ${st.toLocaleString()}</div>`;
+  }
+}
+
 
 function loadState(){
   const raw = localStorage.getItem(KEY);
@@ -251,6 +386,50 @@ function addDefaultVideoTasks(contentId){
   saveState(state);
 }
 
+
+function addDefaultStreamTasks(contentId){
+  const state = loadState();
+  const c = state.content.find(x => x.id === contentId);
+  if(!c) return;
+
+  const start = c.publish_datetime ? new Date(c.publish_datetime) : new Date();
+  const day = 24*60*60*1000;
+
+  const tasks = [
+    {name:"Stream-Plan (Thema/Goal)", cat:"Script", dur:30, energy:"Medium", off:-1},
+    {name:"Stream-Setup Check (Audio/OBS)", cat:"Admin", dur:20, energy:"Low", off:-1},
+    {name:"Stream starten", cat:"Recording", dur:180, energy:"High", off:0},
+    {name:"VOD/Upload prüfen", cat:"Upload", dur:20, energy:"Low", off:0},
+    {name:"Notizen: Highlights", cat:"Admin", dur:15, energy:"Low", off:0},
+  ];
+
+  const existing = state.tasks.filter(t => t.content_id === contentId).map(t => t.task_name);
+  let orderBase = state.tasks.filter(t => t.content_id === contentId).length;
+
+  for(const t of tasks){
+    if(existing.includes(t.name)) continue;
+    const due = new Date(start.getTime() + t.off*day);
+    if(t.off === 0){
+      due.setHours(start.getHours(), start.getMinutes(), 0, 0);
+    } else {
+      due.setHours(18,0,0,0);
+    }
+    state.tasks.push({
+      id: uid("t"),
+      content_id: contentId,
+      task_name: t.name,
+      category: t.cat,
+      status: "To Do",
+      due_date: due.toISOString(),
+      duration_min: t.dur,
+      energy: t.energy,
+      order: ++orderBase
+    });
+  }
+  saveState(state);
+}
+
+
 function updateContent(id, patch){
   const state = loadState();
   const idx = state.content.findIndex(x => x.id === id);
@@ -295,6 +474,18 @@ const els = {
   newPriority: document.getElementById("newPriority"),
   btnCreate: document.getElementById("btnCreate"),
   contentList: document.getElementById("contentList"),
+
+  setPublishDay: document.getElementById("setPublishDay"),
+  setPublishTime: document.getElementById("setPublishTime"),
+  setStreamDay: document.getElementById("setStreamDay"),
+  setStreamTime: document.getElementById("setStreamTime"),
+  btnSaveSettings: document.getElementById("btnSaveSettings"),
+  btnResetSettings: document.getElementById("btnResetSettings"),
+  btnCreateWeeklyPlan: document.getElementById("btnCreateWeeklyPlan"),
+  btnExportData: document.getElementById("btnExportData"),
+  btnImportData: document.getElementById("btnImportData"),
+  settingsSummary: document.getElementById("settingsSummary"),
+
 };
 
 function render(){
@@ -482,17 +673,27 @@ document.querySelectorAll(".tab").forEach(btn=>{
     document.getElementById("tab-week").style.display = tab==="week" ? "" : "none";
     document.getElementById("tab-pipeline").style.display = tab==="pipeline" ? "" : "none";
     document.getElementById("tab-content").style.display = tab==="content" ? "" : "none";
+    document.getElementById("tab-settings").style.display = tab==="settings" ? "" : "none";
     render();
   });
 });
 
 els.btnCreate.addEventListener("click", ()=>{
+  let publishVal = els.newPublish.value;
+  if(!publishVal){
+    const s = loadSettings();
+    if(els.newType.value === "Video"){
+      publishVal = toDatetimeLocalValue(dateInCurrentWeek(s.publishDay, s.publishTime));
+    } else {
+      publishVal = toDatetimeLocalValue(dateInCurrentWeek(s.streamDay, s.streamTime));
+    }
+  }
   const item = createContent({
     type: els.newType.value,
     title: els.newTitle.value.trim(),
     series: els.newSeries.value.trim(),
     status: els.newStatus.value,
-    publish: els.newPublish.value,
+    publish: publishVal,
     priority: els.newPriority.value
   });
   els.newTitle.value = "";
@@ -500,19 +701,22 @@ els.btnCreate.addEventListener("click", ()=>{
     const ok = confirm("Standard-Tasks für dieses Video hinzufügen?");
     if(ok) addDefaultVideoTasks(item.id);
   }
+  if(item.type==="Stream"){
+    const okS = confirm("Standard-Tasks für diesen Stream hinzufügen?");
+    if(okS) addDefaultStreamTasks(item.id);
+  }
   render();
 });
 
 els.btnCreateWeeklyVideo.addEventListener("click", ()=>{
-  const now = new Date();
-  const publish = new Date(endOfWeek(now));
-  publish.setHours(18,0,0,0);
+  const s = loadSettings();
+  const publish = dateInCurrentWeek(s.publishDay, s.publishTime);
   const item = createContent({
     type:"Video",
     title:"Video der Woche",
     series:"",
     status:"Planned",
-    publish: publish.toISOString().slice(0,16),
+    publish: toDatetimeLocalValue(publish),
     priority: 1
   });
   addDefaultVideoTasks(item.id);
@@ -531,6 +735,113 @@ els.btnResetFilters.addEventListener("click", ()=>{
 els.filterEnergy.addEventListener("change", render);
 
 render();
+
+
+/* -------------------- Settings handlers -------------------- */
+if(els.btnSaveSettings){
+  els.btnSaveSettings.addEventListener("click", ()=>{
+    const s = loadSettings();
+    s.publishDay = Number(els.setPublishDay.value);
+    s.publishTime = els.setPublishTime.value || s.publishTime;
+    s.streamDay = Number(els.setStreamDay.value);
+    s.streamTime = els.setStreamTime.value || s.streamTime;
+    saveSettings(s);
+    alert("Gespeichert.");
+    renderSettingsUI();
+  });
+}
+if(els.btnResetSettings){
+  els.btnResetSettings.addEventListener("click", ()=>{
+    const s = defaultSettings();
+    saveSettings(s);
+    renderSettingsUI();
+    alert("Zurückgesetzt.");
+  });
+}
+
+if(els.btnCreateWeeklyPlan){
+  els.btnCreateWeeklyPlan.addEventListener("click", ()=>{
+    const s = loadSettings();
+    const pub = dateInCurrentWeek(s.publishDay, s.publishTime);
+    const video = createContent({
+      type:"Video",
+      title:"Video der Woche",
+      series:"",
+      status:"Planned",
+      publish: toDatetimeLocalValue(pub),
+      priority: 1
+    });
+    addDefaultVideoTasks(video.id);
+
+    const addStream = confirm("Auch einen Stream für diese Woche erstellen?");
+    if(addStream){
+      const st = dateInCurrentWeek(s.streamDay, s.streamTime);
+      const stream = createContent({
+        type:"Stream",
+        title:"Stream der Woche",
+        series:"",
+        status:"Planned",
+        publish: toDatetimeLocalValue(st),
+        priority: 2
+      });
+      addDefaultStreamTasks(stream.id);
+    }
+    alert("Plan erstellt. Schau in „Diese Woche“ oder „Pipeline“.");
+    render();
+  });
+}
+
+/* -------------------- Backup export/import -------------------- */
+function downloadTextFile(filename, text){
+  const blob = new Blob([text], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+if(els.btnExportData){
+  els.btnExportData.addEventListener("click", ()=>{
+    const payload = {
+      version: "v1.2",
+      exported_at: new Date().toISOString(),
+      settings: loadSettings(),
+      data: loadState()
+    };
+    downloadTextFile("creator_planner_backup.json", JSON.stringify(payload, null, 2));
+  });
+}
+
+if(els.btnImportData){
+  els.btnImportData.addEventListener("click", ()=>{
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = () => {
+      const file = input.files && input.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const obj = JSON.parse(String(reader.result || ""));
+          if(obj.settings) saveSettings(obj.settings);
+          if(obj.data) saveState(obj.data);
+          alert("Import fertig.");
+          renderSettingsUI();
+          render();
+        } catch {
+          alert("Import fehlgeschlagen: ungültige JSON-Datei.");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+}
 
 // --- PWA: service worker registration ---
 if ("serviceWorker" in navigator) {
