@@ -1,4 +1,4 @@
-const CACHE_NAME = "creator-planner-v1-2";
+const CACHE_NAME = "creator-planner-v1-3";
 const ASSETS = [
   "./",
   "./index.html",
