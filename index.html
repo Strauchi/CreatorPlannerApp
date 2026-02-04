@@ -50,61 +50,12 @@
   </header>
 
   <div class="tabs">
-    <button class="tab active" data-tab="week">Diese Woche</button>
-    <button class="tab" data-tab="pipeline">Pipeline</button>
+    <button class="tab active" data-tab="calendar">Kalender</button>
     <button class="tab" data-tab="content">Content</button>
     <button class="tab" data-tab="settings">Settings</button>
-    <button class="tab" data-tab="calendar">Kalender</button>
   </div>
 
   <main>
-    <section id="tab-week">
-      <div class="grid">
-        <div class="card">
-          <div class="row" style="justify-content: space-between;">
-            <div>
-              <div class="muted">Fokus</div>
-              <div id="weekFocus" style="font-weight:650;margin-top:4px;">–</div>
-            </div>
-            <button id="btnCreateWeeklyVideo">+ Video für diese Woche</button>
-          </div>
-          <div class="hr"></div>
-          <div class="muted">Next Actions (max. 3)</div>
-          <div id="nextActions" class="list" style="margin-top:8px;"></div>
-        </div>
-
-        <div class="card">
-          <div class="muted">Offene Tasks – Filter</div>
-          <div class="row" style="margin-top:8px;">
-            <select id="filterEnergy">
-              <option value="">Energie: alle</option>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-            </select>
-            <button class="secondary" id="btnResetFilters">Reset</button>
-          </div>
-          <div class="hr"></div>
-          <div class="muted">Tasks diese Woche</div>
-          <div id="weekTasks" class="list" style="margin-top:8px;"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="tab-pipeline" style="display:none;">
-      <div class="card">
-        <div class="row" style="justify-content: space-between;">
-          <div>
-            <div class="muted">Pipeline</div>
-            <div class="small">Tipp: Nutze „Status ändern“ an jedem Item.</div>
-          </div>
-          <button id="btnNewContent">+ Content</button>
-        </div>
-      </div>
-      <div style="height:10px;"></div>
-      <div class="cols" id="kanban"></div>
-    </section>
-
     <section id="tab-content" style="display:none;">
       <div class="split">
         <div class="card">
@@ -186,6 +137,37 @@
             <button class="secondary" id="btnResetSettings">Reset</button>
           </div>
 
+          
+          <div class="hr"></div>
+          <div class="muted">Auto-Plan Optionen</div>
+          <div class="small" style="margin-top:6px;">Aktiviere nur die Schritte, die du wirklich nutzt. Auto-Plan plant Tasks ab deiner Arbeitszeit und nie in der Vergangenheit.</div>
+
+          <div class="row" style="margin-top:10px;">
+            <div class="pill">Arbeitszeit Start</div>
+            <input id="setWorkStartTime" type="time" />
+          </div>
+
+          <div class="hr"></div>
+          <div class="muted">Auto-Plan Schritte</div>
+          <div class="small muted" style="margin-top:6px;">Video-Workflow</div>
+
+          <div class="row" style="margin-top:10px;">
+            <label class="small"><input type="checkbox" id="ap_outline" /> Outline/Skript</label>
+            <label class="small"><input type="checkbox" id="ap_recprep" /> Aufnahme vorbereiten</label>
+            <label class="small"><input type="checkbox" id="ap_record" /> Aufnahme</label>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <label class="small"><input type="checkbox" id="ap_edit_rough" /> Schnitt (Grob)</label>
+            <label class="small"><input type="checkbox" id="ap_edit_fine" /> Schnitt (Fein + Audio)</label>
+            <label class="small"><input type="checkbox" id="ap_thumb" /> Thumbnail</label>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <label class="small"><input type="checkbox" id="ap_title" /> Titel/Description</label>
+            <label class="small"><input type="checkbox" id="ap_chapters" /> Kapitelmarken</label>
+            <label class="small"><input type="checkbox" id="ap_qa" /> Final QA</label>
+            <label class="small"><input type="checkbox" id="ap_upload" /> Upload/Schedule</label>
+          </div>
+
           <div class="hr"></div>
           <div class="muted">Tools</div>
           <div class="row" style="margin-top:8px;">
@@ -216,7 +198,7 @@
 
   
     <!-- CALENDAR -->
-    <section id="tab-calendar" style="display:none;">
+    <section id="tab-calendar">
       <div class="card">
         <div class="row" style="justify-content: space-between;">
           <div>
@@ -225,8 +207,9 @@
           </div>
           <div class="row">
             <select id="calRange">
-              <option value="14" selected>Nächste 14 Tage</option>
-              <option value="7">Nächste 7 Tage</option>
+              <option value="2" selected>Nächste 2 Wochen</option>
+              <option value="4">Nächste 4 Wochen</option>
+              <option value="1">Nächste 1 Woche</option>
             </select>
             <button class="secondary" id="btnAutoPlanAll">Auto-Plan: alle offenen Videos</button>
           </div>
@@ -251,7 +234,20 @@ function defaultSettings(){
     publishDay: 6,         // 0=Mon ... 6=Sun
     publishTime: "18:00",
     streamDay: 5,
-    streamTime: "20:00"
+    streamTime: "20:00",
+    workStartTime: "17:00",
+    autoplan: {
+      outline: false,
+      recprep: true,
+      record: true,
+      edit_rough: true,
+      edit_fine: true,
+      thumb: true,
+      title: true,
+      chapters: true,
+      qa: false,
+      upload: true
+    }
   };
 }
 function loadSettings(){
@@ -329,6 +325,20 @@ function renderSettingsUI(){
   if(els.setPublishTime) els.setPublishTime.value = s.publishTime;
   if(els.setStreamDay) els.setStreamDay.value = String(s.streamDay);
   if(els.setStreamTime) els.setStreamTime.value = s.streamTime;
+
+  if(els.setWorkStartTime) els.setWorkStartTime.value = s.workStartTime || "17:00";
+  const ap = s.autoplan || {};
+  if(els.ap_outline) els.ap_outline.checked = !!ap.outline;
+  if(els.ap_recprep) els.ap_recprep.checked = ap.recprep !== false;
+  if(els.ap_record) els.ap_record.checked = ap.record !== false;
+  if(els.ap_edit_rough) els.ap_edit_rough.checked = ap.edit_rough !== false;
+  if(els.ap_edit_fine) els.ap_edit_fine.checked = ap.edit_fine !== false;
+  if(els.ap_thumb) els.ap_thumb.checked = ap.thumb !== false;
+  if(els.ap_title) els.ap_title.checked = ap.title !== false;
+  if(els.ap_chapters) els.ap_chapters.checked = ap.chapters !== false;
+  if(els.ap_qa) els.ap_qa.checked = !!ap.qa;
+  if(els.ap_upload) els.ap_upload.checked = ap.upload !== false;
+
 
   const pub = nextOccurrenceInOrNextWeek(s.publishDay, s.publishTime);
   const st = nextOccurrenceInOrNextWeek(s.streamDay, s.streamTime);
@@ -511,18 +521,21 @@ function autoPlanVideoTasks(contentId){
   }
 
   // Define plan steps in order (compression happens automatically)
-  const steps = [
-    {name:"Outline / Skript", cat:"Script", dur:60, energy:"High", daysBefore:6},
-    {name:"Aufnahme vorbereiten", cat:"Admin", dur:30, energy:"Medium", daysBefore:6},
-    {name:"Aufnahme", cat:"Recording", dur:150, energy:"High", daysBefore:5},
-    {name:"Schnitt (Grob)", cat:"Editing", dur:120, energy:"High", daysBefore:4},
-    {name:"Schnitt (Fein + Audio)", cat:"Editing", dur:120, energy:"High", daysBefore:3},
-    {name:"Thumbnail", cat:"Thumbnail", dur:60, energy:"Medium", daysBefore:2},
-    {name:"Titel/Description", cat:"Upload", dur:45, energy:"Low", daysBefore:2},
-    {name:"Kapitelmarken", cat:"Upload", dur:30, energy:"Low", daysBefore:1},
-    {name:"Final QA", cat:"Upload", dur:20, energy:"Low", daysBefore:1},
-    {name:"Upload / Schedule", cat:"Upload", dur:30, energy:"Low", daysBefore:1},
-  ];
+  
+  const sset = loadSettings();
+  const ap = (sset.autoplan || {});
+  const steps = [];
+  if(ap.outline) steps.push({name:"Outline / Skript", cat:"Script", dur:60, energy:"High", daysBefore:6});
+  if(ap.recprep) steps.push({name:"Aufnahme vorbereiten", cat:"Admin", dur:30, energy:"Medium", daysBefore:6});
+  if(ap.record) steps.push({name:"Aufnahme", cat:"Recording", dur:150, energy:"High", daysBefore:5});
+  if(ap.edit_rough) steps.push({name:"Schnitt (Grob)", cat:"Editing", dur:120, energy:"High", daysBefore:4});
+  if(ap.edit_fine) steps.push({name:"Schnitt (Fein + Audio)", cat:"Editing", dur:120, energy:"High", daysBefore:3});
+  if(ap.thumb) steps.push({name:"Thumbnail", cat:"Thumbnail", dur:60, energy:"Medium", daysBefore:2});
+  if(ap.title) steps.push({name:"Titel/Description", cat:"Upload", dur:45, energy:"Low", daysBefore:2});
+  if(ap.chapters) steps.push({name:"Kapitelmarken", cat:"Upload", dur:30, energy:"Low", daysBefore:1});
+  if(ap.qa) steps.push({name:"Final QA", cat:"Upload", dur:20, energy:"Low", daysBefore:1});
+  if(ap.upload) steps.push({name:"Upload / Schedule", cat:"Upload", dur:30, energy:"Low", daysBefore:1});
+
 
   // Remove existing auto tasks with same names (so it can re-plan)
   const names = new Set(steps.map(s => s.name));
@@ -531,12 +544,24 @@ function autoPlanVideoTasks(contentId){
   // Create new tasks with clamped due dates and monotonic ordering
   let lastDue = null;
   let orderBase = state.tasks.filter(t => t.content_id === contentId).length;
+  const workStart = (sset.workStartTime || "17:00");
+  const perDayCursor = {};
 
   for(const step of steps){
     let due = new Date(publish.getTime() - step.daysBefore*24*60*60*1000);
-    // Use 18:00 as default working time
-    due.setHours(18,0,0,0);
-    due = clampNotPast(due, "18:00");
+    // Set a reasonable time: start at workStart and stack tasks sequentially on the same day
+    const key = dayKey(due);
+    if(!perDayCursor[key]){
+      const parts = String(workStart).split(":");
+      const hh = parseInt(parts[0]||"17",10);
+      const mm = parseInt(parts[1]||"0",10);
+      due.setHours(hh, mm, 0, 0);
+    } else {
+      due = new Date(perDayCursor[key]);
+    }
+    due = clampNotPast(due, workStart);
+    // advance cursor by duration + 15min buffer
+    perDayCursor[key] = new Date(due.getTime() + (step.dur + 15)*60*1000).toISOString();
 
     if(lastDue && due.getTime() < lastDue.getTime()){
       // keep order non-decreasing; push 30min after last
@@ -617,6 +642,19 @@ const els = {
   btnImportData: document.getElementById("btnImportData"),
   settingsSummary: document.getElementById("settingsSummary"),
 
+  setWorkStartTime: document.getElementById("setWorkStartTime"),
+  ap_outline: document.getElementById("ap_outline"),
+  ap_recprep: document.getElementById("ap_recprep"),
+  ap_record: document.getElementById("ap_record"),
+  ap_edit_rough: document.getElementById("ap_edit_rough"),
+  ap_edit_fine: document.getElementById("ap_edit_fine"),
+  ap_thumb: document.getElementById("ap_thumb"),
+  ap_title: document.getElementById("ap_title"),
+  ap_chapters: document.getElementById("ap_chapters"),
+  ap_qa: document.getElementById("ap_qa"),
+  ap_upload: document.getElementById("ap_upload"),
+
+
   calRange: document.getElementById("calRange"),
   btnAutoPlanAll: document.getElementById("btnAutoPlanAll"),
   calendarList: document.getElementById("calendarList"),
@@ -624,76 +662,28 @@ const els = {
 
 };
 
+
 function render(){
   const state = loadState();
   const now = new Date();
   const week = getISOWeek(now);
-  const s = startOfWeek(now), e = endOfWeek(now);
-  els.subtitle.textContent = `Woche: ${week} • Lokal gespeichert (offline)`;
+  if(els.subtitle) els.subtitle.textContent = `Woche: ${week} • Lokal gespeichert (offline)`;
 
-  const weekItems = state.content.filter(c => c.week === week);
-  const focus = weekItems
-    .filter(c => c.type === "Video")
-    .sort((a,b)=> (a.priority-b.priority) || ((a.publish_datetime||"").localeCompare(b.publish_datetime||"")) )[0];
-
-  els.weekFocus.innerHTML = focus
-    ? `<div style="font-size:14px;">${escapeHtml(focus.title_working)} <span class="pill">${focus.status}</span></div>
-       <div class="muted">Publish: ${focus.publish_datetime ? fmtDateTime(focus.publish_datetime) : "—"} • ${escapeHtml(focus.game_or_series || "")}</div>
-       <div class="row" style="margin-top:8px;">
-         <button class="secondary" onclick="window.__addDefaults('${focus.id}')">+ Standard-Tasks</button>
-         <button class="secondary" onclick="window.__editNotes('${focus.id}')">Notizen</button>
-       </div>`
-    : `<div class="muted">Kein Video für diese Woche. Erstelle eins mit „+ Video für diese Woche“.</div>`;
-
-  const energyFilter = els.filterEnergy.value;
-  const weekTasks = state.tasks
-    .filter(t => t.due_date)
-    .filter(t => {
-      const d = new Date(t.due_date);
-      return d >= s && d < e;
-    })
-    .filter(t => !energyFilter || t.energy === energyFilter)
-    .sort((a,b)=> new Date(a.due_date) - new Date(b.due_date));
-
-  const next = weekTasks
-    .filter(t => t.status !== "Done")
-    .sort((a,b)=>{
-      const da = new Date(a.due_date), db = new Date(b.due_date);
-      if(da.getTime() !== db.getTime()) return da - db;
-      const pr = (x)=> x.energy==="High"?0:x.energy==="Medium"?1:2;
-      return pr(a)-pr(b);
-    })
-    .slice(0,3);
-
-  els.nextActions.innerHTML = next.length ? "" : `<div class="muted">Keine offenen Tasks diese Woche.</div>`;
-  for(const t of next) els.nextActions.appendChild(taskCard(t, true));
-
-  els.weekTasks.innerHTML = weekTasks.length ? "" : `<div class="muted">Keine Tasks in dieser Woche (noch).</div>`;
-  for(const t of weekTasks) els.weekTasks.appendChild(taskCard(t, false));
-
-  els.kanban.innerHTML = "";
-  for(const col of KanbanCols){
-    const box = document.createElement("div");
-    box.className = "col";
-    box.innerHTML = `<h3>${col}</h3>`;
-    const list = document.createElement("div");
-    list.className = "list";
-
-    const items = state.content
-      .filter(c => c.status === col)
-      .sort((a,b)=> (a.priority-b.priority));
-
-    if(!items.length){
-      const empty = document.createElement("div");
-      empty.className = "muted small";
-      empty.textContent = "—";
-      list.appendChild(empty);
+  // Content list
+  if(els.contentList){
+    els.contentList.innerHTML = "";
+    if(!state.content.length){
+      els.contentList.innerHTML = `<div class="muted">Noch kein Content vorhanden.</div>`;
     } else {
-      for(const c of items) list.appendChild(contentMiniCard(c));
+      for(const c of state.content){
+        els.contentList.appendChild(contentFullCard(c));
+      }
     }
-    box.appendChild(list);
-    els.kanban.appendChild(box);
   }
+
+  renderCalendar();
+}
+
 
   els.contentList.innerHTML = "";
   if(!state.content.length){
@@ -786,6 +776,121 @@ function renderCalendar(){
 }
 
 
+
+function renderCalendar(){
+  if(!els.calendarList) return;
+  const state = loadState();
+  const weeks = parseInt((els.calRange && els.calRange.value) || "2", 10);
+  const now = new Date();
+  const start = startOfWeek(now); // Monday 00:00
+  start.setHours(0,0,0,0);
+
+  // helper to format time
+  const fmtTime = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  };
+
+  els.calendarList.innerHTML = "";
+
+  for(let w=0; w<weeks; w++){
+    const ws = new Date(start);
+    ws.setDate(start.getDate() + w*7);
+    const we = new Date(ws);
+    we.setDate(ws.getDate()+7);
+
+    const weekKey = getISOWeek(ws);
+    const weekCard = document.createElement("div");
+    weekCard.className = "card";
+
+    const rangeLabel = `${ws.toLocaleDateString(undefined,{day:'2-digit',month:'2-digit'})} – ${new Date(we.getTime()-1).toLocaleDateString(undefined,{day:'2-digit',month:'2-digit'})}`;
+    weekCard.innerHTML = `<div class="row" style="justify-content: space-between;">
+      <div>
+        <div style="font-weight:650">Woche ${weekKey}</div>
+        <div class="muted small">${rangeLabel}</div>
+      </div>
+      <div class="pill">${w===0 ? "Aktuelle Woche" : ""}</div>
+    </div>`;
+
+    // days
+    for(let i=0;i<7;i++){
+      const day = new Date(ws);
+      day.setDate(ws.getDate()+i);
+      const dayStart = new Date(day); dayStart.setHours(0,0,0,0);
+      const dayEnd = new Date(dayStart); dayEnd.setDate(dayStart.getDate()+1);
+
+      // tasks of day
+      const tasks = state.tasks
+        .filter(t => t.due_date)
+        .filter(t => {
+          const d = new Date(t.due_date);
+          return d >= dayStart && d < dayEnd;
+        })
+        .sort((a,b)=> new Date(a.due_date)-new Date(b.due_date));
+
+      // publishes of day
+      const pubs = state.content
+        .filter(c => c.publish_datetime)
+        .filter(c => {
+          const d = new Date(c.publish_datetime);
+          return d >= dayStart && d < dayEnd;
+        });
+
+      const dayHeader = document.createElement("div");
+      dayHeader.style.marginTop = "12px";
+      dayHeader.innerHTML = `<div class="row" style="justify-content: space-between;">
+        <div>
+          <div style="font-weight:650">${day.toLocaleDateString(undefined,{weekday:'long', day:'2-digit', month:'2-digit'})}</div>
+          <div class="muted small">${(dayStart.toDateString()===new Date().toDateString()) ? "Heute" : ""}</div>
+        </div>
+        <div class="row">
+          ${pubs.map(p=>`<span class="pill">${p.type}: ${escapeHtml(p.title_working)}</span>`).join("")}
+        </div>
+      </div>`;
+      weekCard.appendChild(dayHeader);
+
+      if(!tasks.length && !pubs.length){
+        const empty = document.createElement("div");
+        empty.className = "muted";
+        empty.style.marginTop = "6px";
+        empty.textContent = "—";
+        weekCard.appendChild(empty);
+        continue;
+      }
+
+      if(tasks.length){
+        const list = document.createElement("div");
+        list.className = "list";
+        list.style.marginTop = "8px";
+
+        for(const t of tasks){
+          const c = state.content.find(x=>x.id===t.content_id);
+          const done = t.status === "Done";
+          const item = document.createElement("div");
+          item.className = "item";
+          item.innerHTML = `
+            <div class="row" style="justify-content: space-between;">
+              <div style="min-width: 220px;">
+                <div style="font-weight:650">${escapeHtml(t.task_name)} ${done ? '<span class="pill">✓</span>' : ''}</div>
+                <div class="muted">${escapeHtml(t.category)} • ${t.energy} • ${t.duration_min} min • ${fmtTime(t.due_date)}</div>
+                ${c ? `<div class="muted small">Content: ${escapeHtml(c.title_working)}</div>` : ``}
+              </div>
+              <div class="row">
+                <label class="small"><input type="checkbox" ${done ? "checked" : ""} onchange="window.__toggleDone('${t.id}', this.checked)" /> Fertig</label>
+              </div>
+            </div>
+          `;
+          list.appendChild(item);
+        }
+        weekCard.appendChild(list);
+      }
+    }
+
+    els.calendarList.appendChild(weekCard);
+  }
+}
+
+
 function taskCard(t, compact){
   const state = loadState();
   const c = state.content.find(x => x.id === t.content_id);
@@ -804,23 +909,6 @@ function taskCard(t, compact){
         </select>
         <button class="danger" onclick="window.__delTask('${t.id}')">✕</button>
       </div>
-    </div>
-  `;
-  return el;
-}
-
-function contentMiniCard(c){
-  const el = document.createElement("div");
-  el.className = "item";
-  el.innerHTML = `
-    <div style="font-weight:650">${escapeHtml(c.title_working)}</div>
-    <div class="muted">${c.type} • Prio ${c.priority} • ${escapeHtml(c.game_or_series || "")}</div>
-    <div class="row" style="margin-top:8px;">
-      <select onchange="window.__setContentStatus('${c.id}', this.value)">
-        ${Statuses.map(s => `<option ${c.status===s?"selected":""}>${s}</option>`).join("")}
-      </select>
-      <button class="secondary" onclick="window.__addDefaults('${c.id}')">Tasks</button>
-      <button class="danger" onclick="window.__delContent('${c.id}')">✕</button>
     </div>
   `;
   return el;
@@ -861,6 +949,7 @@ function escapeHtml(str){
 
 window.__setContentStatus = (id, status) => { updateContent(id, {status}); render(); };
 window.__setTaskStatus = (id, status) => { updateTask(id, {status}); render(); };
+window.__toggleDone = (id, checked) => { updateTask(id, {status: checked ? "Done" : "To Do"}); render(); };
 window.__delContent = (id) => { if(confirm("Content wirklich löschen?")) { deleteContent(id); render(); } };
 window.__delTask = (id) => { if(confirm("Task löschen?")) { deleteTask(id); render(); } };
 window.__addDefaults = (id) => { addDefaultVideoTasks(id); render(); };
@@ -893,9 +982,10 @@ document.querySelectorAll(".tab").forEach(btn=>{
     const tab = btn.dataset.tab;
     document.getElementById("tab-week").style.display = tab==="week" ? "" : "none";
     document.getElementById("tab-pipeline").style.display = tab==="pipeline" ? "" : "none";
+    document.getElementById("tab-calendar").style.display = tab==="calendar" ? "" : "none";
     document.getElementById("tab-content").style.display = tab==="content" ? "" : "none";
     document.getElementById("tab-settings").style.display = tab==="settings" ? "" : "none";
-    document.getElementById("tab-calendar").style.display = tab==="calendar" ? "" : "none";
+    renderSettingsUI();
     render();
   });
 });
@@ -920,8 +1010,8 @@ els.btnCreate.addEventListener("click", ()=>{
   });
   els.newTitle.value = "";
   if(item.type==="Video"){
-    const ok = confirm("Standard-Tasks für dieses Video hinzufügen?");
-    if(ok) addDefaultVideoTasks(item.id);
+    const ok = confirm("Auto-Plan (empfohlen) für dieses Video erstellen?");
+    if(ok) autoPlanVideoTasks(item.id);
   }
   if(item.type==="Stream"){
     const okS = confirm("Standard-Tasks für diesen Stream hinzufügen?");
@@ -930,8 +1020,6 @@ els.btnCreate.addEventListener("click", ()=>{
   render();
 });
 
-els.btnCreateWeeklyVideo.addEventListener("click", ()=>{
-  const s = loadSettings();
   const publish = nextOccurrenceInOrNextWeek(s.publishDay, s.publishTime);
   const item = createContent({
     type:"Video",
@@ -945,16 +1033,7 @@ els.btnCreateWeeklyVideo.addEventListener("click", ()=>{
   render();
 });
 
-els.btnNewContent.addEventListener("click", ()=>{
-  document.querySelector('[data-tab="content"]').click();
-  els.newTitle.focus();
-});
 
-els.btnResetFilters.addEventListener("click", ()=>{
-  els.filterEnergy.value = "";
-  render();
-});
-els.filterEnergy.addEventListener("change", render);
 
 if(els.calRange){
   els.calRange.addEventListener("change", render);
@@ -983,6 +1062,21 @@ if(els.btnSaveSettings){
     s.publishTime = els.setPublishTime.value || s.publishTime;
     s.streamDay = Number(els.setStreamDay.value);
     s.streamTime = els.setStreamTime.value || s.streamTime;
+
+    s.workStartTime = (els.setWorkStartTime && els.setWorkStartTime.value) ? els.setWorkStartTime.value : (s.workStartTime || "17:00");
+    s.autoplan = {
+      outline: !!(els.ap_outline && els.ap_outline.checked),
+      recprep: !!(els.ap_recprep && els.ap_recprep.checked),
+      record: !!(els.ap_record && els.ap_record.checked),
+      edit_rough: !!(els.ap_edit_rough && els.ap_edit_rough.checked),
+      edit_fine: !!(els.ap_edit_fine && els.ap_edit_fine.checked),
+      thumb: !!(els.ap_thumb && els.ap_thumb.checked),
+      title: !!(els.ap_title && els.ap_title.checked),
+      chapters: !!(els.ap_chapters && els.ap_chapters.checked),
+      qa: !!(els.ap_qa && els.ap_qa.checked),
+      upload: !!(els.ap_upload && els.ap_upload.checked)
+    };
+
     saveSettings(s);
     alert("Gespeichert.");
     renderSettingsUI();
@@ -1009,7 +1103,7 @@ if(els.btnCreateWeeklyPlan){
       publish: toDatetimeLocalValue(pub),
       priority: 1
     });
-    addDefaultVideoTasks(video.id);
+    autoPlanVideoTasks(video.id);
 
     const addStream = confirm("Auch einen Stream für diese Woche erstellen?");
     if(addStream){
